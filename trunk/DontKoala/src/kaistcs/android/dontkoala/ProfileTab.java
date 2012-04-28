@@ -16,9 +16,9 @@ public class ProfileTab extends Activity {
         setContentView(R.layout.profile);
         
         // 이부분은 테스트코드라 실제 코딩하실때 삭제하시면 됩니다
-        TextView textView = new TextView(this);
-	    textView.setText("여기에 프로필 부분 채워주세요");
-	    setContentView(textView);
+        //TextView textView = new TextView(this);
+	    //textView.setText("여기에 프로필 부분 채워주세요");
+	    //setContentView(textView);
 
 	}
 
