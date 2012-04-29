@@ -20,7 +20,6 @@ public class DontKoalaActivity extends TabActivity implements OnTabChangeListene
         
         mTabHost = getTabHost();
         
-        // 일단 탭 아이콘이 프로필 밖에 없어서 전부 통일, 나중에 이미지만 변경
         mTabHost.addTab(mTabHost.newTabSpec("profile")
         						.setIndicator("Profile", getResources().getDrawable(R.drawable.ic_tab_profile))
         						.setContent(new Intent(this, ProfileTab.class)));
