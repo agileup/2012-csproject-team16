@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+	
+	<PreferenceCategory
+		xmlns:android="http://schemas.android.com/apk/res/android"
+		android:key="profile_basic_settings"
+		android:title="Basic Settings">
+		
+	    <EditTextPreference
+	        android:key="profile_name"
+	        android:title="Name"
+	        android:dialogTitle="Enter your name"
+	        android:persistent="true"
+	        android:selectable="true"/>
+		
+		<Preference
+			android:key="profile_home_location"
+			android:title="Home Location"
+			android:selectable="true"/>
+		
+		<Preference
+			android:key="profile_emergency_contacts"
+			android:title="Emergency Contacts"
+			android:summary="Send messages when you're in a trouble"
+			android:selectable="true"/>
+	</PreferenceCategory>
+
+	<PreferenceCategory
+		xmlns:android="http://schemas.android.com/apk/res/android"
+		android:key="profile_find_phone"
+		android:title="Find Your Phone">
+		
+		<CheckBoxPreference
+			android:key="profile_send_location"
+			android:title="Send location via SMS"
+			android:summary="App will be running in background"
+			android:defaultValue="false"
+			android:persistent="true"
+			android:selectable="true"/>
+		
+		<EditTextPreference
+			android:key="profile_preset_text"
+			android:title="Preset text"
+			android:summary="Only reply to a message with the preset text"      
+			android:dialogTitle="Enter the preset text"
+			android:dependency="profile_send_location"
+			android:persistent="true"/>
+	</PreferenceCategory>
+</PreferenceScreen>

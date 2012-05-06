@@ -5,6 +5,8 @@
     android:versionName="1.0" >
 
     <uses-sdk android:minSdkVersion="10" />
+    
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <application
         android:icon="@drawable/ic_launcher"
@@ -22,7 +24,8 @@
         </activity>
         <activity android:name="ProfileTab"></activity>
         <activity android:name="GroupTab"></activity>
-        <activity android:name=".NotificationTab"></activity>
+        <activity android:name="NotificationTab"></activity>
+        <activity android:name="EmergencyContacts" android:label="Edit Emergency Contacts"></activity>
     </application>
 
 </manifest>
