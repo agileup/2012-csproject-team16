@@ -6,6 +6,7 @@
 
     <uses-sdk android:minSdkVersion="10" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
@@ -28,7 +29,7 @@
         <activity android:name="GroupTab"></activity>
         <activity android:name="NotificationTab"></activity>
         <activity android:name="EmergencyContacts" android:label="Edit Emergency Contacts"></activity>
-        
+        <activity android:name="HomeLocation" android:label="Long-touch your home location"></activity>
         
     </application>
 
