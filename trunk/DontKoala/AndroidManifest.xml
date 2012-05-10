@@ -5,7 +5,8 @@
     android:versionName="1.0" >
 
     <uses-sdk android:minSdkVersion="10" />
-    
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <application
@@ -26,6 +27,8 @@
         <activity android:name="GroupTab"></activity>
         <activity android:name="NotificationTab"></activity>
         <activity android:name="EmergencyContacts" android:label="Edit Emergency Contacts"></activity>
+        
+        
     </application>
 
 </manifest>

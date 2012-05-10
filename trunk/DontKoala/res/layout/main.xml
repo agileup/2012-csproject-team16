@@ -18,13 +18,17 @@
             android:background="@android:color/transparent"
             android:orientation="vertical">
             
+            <View android:layout_width="fill_parent" android:layout_height="0.5dip" android:background="#000" />
+            
             <TabWidget 
                 android:id="@android:id/tabs"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:background="#000000">
+                android:layout_marginLeft="0dip"
+                android:layout_marginRight="0dip" >
             </TabWidget>
             
+            <View android:layout_width="fill_parent" android:layout_height="2dip" android:background="#FFD200" />
             
             <FrameLayout 
                 android:id="@android:id/tabcontent"

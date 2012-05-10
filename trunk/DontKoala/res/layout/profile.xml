@@ -4,7 +4,7 @@
 	<PreferenceCategory
 		xmlns:android="http://schemas.android.com/apk/res/android"
 		android:key="profile_basic_settings"
-		android:title="Basic Settings">
+		android:title="Basic Settings" >
 		
 		<Preference
 			android:key="profile_name"
@@ -27,7 +27,7 @@
 	<PreferenceCategory
 		xmlns:android="http://schemas.android.com/apk/res/android"
 		android:key="profile_find_phone"
-		android:title="Find Your Phone">
+		android:title="Find Your Phone" >
 		
 		<CheckBoxPreference
 			android:key="profile_send_location"
