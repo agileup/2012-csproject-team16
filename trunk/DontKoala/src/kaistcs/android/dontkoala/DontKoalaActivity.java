@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.widget.TabHost;
-import android.widget.Toast;
 import android.widget.TabHost.OnTabChangeListener;
 
 public class DontKoalaActivity extends TabActivity implements OnTabChangeListener {
@@ -17,6 +16,11 @@ public class DontKoalaActivity extends TabActivity implements OnTabChangeListene
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // 처음 로딩 페이지 띄우고
+        startActivity(new Intent(this, SplashActivity.class));
+        
+        // 실제 탭 화면
         setContentView(R.layout.main);
         
         mTabHost = getTabHost();
@@ -32,7 +36,7 @@ public class DontKoalaActivity extends TabActivity implements OnTabChangeListene
         						.setContent(new Intent(this, NotificationTab.class)));
         
         //mTabHost.getTabWidget().setLeftStripDrawable(drawable);
-        mTabHost.getTabWidget().setStripEnabled(true);
+        //mTabHost.getTabWidget().setStripEnabled(true);
         
         mTabHost.setOnTabChangedListener(this);
         mTabHost.setCurrentTab(0);

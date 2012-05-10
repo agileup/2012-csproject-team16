@@ -23,6 +23,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name="SplashActivity" android:theme="@android:style/Theme.NoTitleBar"></activity>
         <activity android:name="ProfileTab"></activity>
         <activity android:name="GroupTab"></activity>
         <activity android:name="NotificationTab"></activity>
