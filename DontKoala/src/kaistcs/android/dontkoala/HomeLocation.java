@@ -12,9 +12,8 @@ import com.google.android.maps.MapView;
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.Overlay;
 
-import android.app.Activity;
 import android.content.Context;
-import android.content.SharedPreferences;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -25,12 +24,10 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.location.Geocoder;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.View.OnTouchListener;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 
@@ -40,106 +37,32 @@ public class HomeLocation extends MapActivity  {
 	private Button mBtnSearch;
 	
 	private Geocoder geoCoder;
-	private SharedPreferences sharedPrefs;
 	
-	class MapMarker extends Overlay {
-		private GeoPoint p;
-		int k;
+	private class MapMarker extends Overlay {
+		public GeoPoint p;
+		Bitmap markerBmp;
 		
 		MapMarker(GeoPoint _p) {
 			p = _p;
+			markerBmp = BitmapFactory.decodeResource(getResources(), R.drawable.marker);
 		}
 		
 		@Override
 		public boolean draw(Canvas canvas, MapView mapView, boolean shadow, long when) {
-			super.draw(canvas, mapView, shadow);                   
+			super.draw(canvas, mapView, shadow);
 		 
 			Point screenPts = new Point();
 			mapView.getProjection().toPixels(p, screenPts);
 			
-			if (k % 60 == 0) {
-				Log.d("draw", screenPts.x + "," + screenPts.y + "," + p);
-			}
-			k++;
-			
-			Bitmap bmp = BitmapFactory.decodeResource(getResources(), R.drawable.map_marker);
-			canvas.drawBitmap(bmp, screenPts.x-11, screenPts.y-55, null);         
+			canvas.drawBitmap(markerBmp, screenPts.x-markerBmp.getWidth()/2, screenPts.y-markerBmp.getHeight(), null);         
 			return true;
 		}
 	}
 	
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.homelocation);
-		
-		mMapView = (MapView)findViewById(R.id.mapview);	
-		mMapAddr = (EditText)findViewById(R.id.mapAddress);
-		mBtnSearch = (Button)findViewById(R.id.mapSearch);
-		
-		geoCoder = new Geocoder(this, Locale.getDefault());
-		sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
-		
-		mMapView.setBuiltInZoomControls(true);
-		
-		// Animate to...
-		List<Overlay> mapOverlays = mMapView.getOverlays();
-		mapOverlays.clear();
-		
-		GeoPoint curLoc = null;
-		String homeLoc = sharedPrefs.getString("profile_home_location", "");
-		
-		if (homeLoc.isEmpty()) {
-			// ...the last known location
-			LocationManager locM = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-			String bestProvider = locM.getBestProvider(new Criteria(), true);
-			Location l = locM.getLastKnownLocation(bestProvider);
-			curLoc = new GeoPoint( (int)(l.getLatitude() * 1E6), (int)(l.getLongitude() * 1E6) );
-		} else {
-			// ...the home location
-			String[] ar = homeLoc.split(",");
-			curLoc = new GeoPoint(Integer.parseInt(ar[0]), Integer.parseInt(ar[1]));
-			mapOverlays.add(new MapMarker(curLoc));
-		}
-		
-		if (curLoc != null) {
-			MapController ctrl = mMapView.getController();
-			
-			ctrl.animateTo(curLoc);
-			ctrl.setZoom(15);
-		}
-		
-		mapOverlays.add(new LongTouchDetector());
-		mMapView.postInvalidate();
-
-		mBtnSearch.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				try {
-					List<Address> addresses = geoCoder.getFromLocationName(mMapAddr.getText().toString(), 1);
-					
-					if (addresses.size() > 0) {
-						mMapView.getController().animateTo (
-								new GeoPoint(	(int)(addresses.get(0).getLatitude() * 1E6),
-												(int)(addresses.get(0).getLongitude() * 1E6) ));
-						mMapView.postInvalidate();
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}
-
-	@Override
-	protected boolean isRouteDisplayed() {
-		return false;
-	}
-	
-	class LongTouchDetector extends Overlay {
+	private class LongTouchDetector extends Overlay {
 		private GeoPoint lastMapCenter;
 		private Timer longpressTimer = new Timer();
-		static final int LONGPRESS_THRESHOLD = 1000;
+		static final int LONGPRESS_THRESHOLD = 500;
 	    
 		@Override
 		public boolean onTouchEvent(final MotionEvent event, final MapView mapView) {
@@ -178,16 +101,103 @@ public class HomeLocation extends MapActivity  {
 		}
 	}
 	
-	public void onLongTouchMap(MotionEvent event, MapView mapView) {
-		GeoPoint point = mapView.getProjection().fromPixels( (int)event.getX(), (int)event.getY() );
-		sharedPrefs.edit().putString("profile_home_location", point.getLatitudeE6() + "," + point.getLongitudeE6()).apply();
-		Log.d("onLongTouchMap", event.getX() + "," + event.getY() + "," + point);
+	private MapMarker mapMarker;
+	
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.homelocation);
 		
-		//List<Overlay> mapOverlays = mapView.getOverlays();
-		//mapOverlays.clear();
-		//mapOverlays.add(new LongTouchDetector());
-		//mapOverlays.add(new MapMarker(point));
-		//mapView.postInvalidate();
+		mMapView = (MapView)findViewById(R.id.mapview);	
+		mMapAddr = (EditText)findViewById(R.id.mapAddress);
+		mBtnSearch = (Button)findViewById(R.id.mapSearch);
+		
+		geoCoder = new Geocoder(this, Locale.getDefault());
+		
+		mMapView.setBuiltInZoomControls(true);
+
+		List<Overlay> mapOverlays = mMapView.getOverlays();
+		mapOverlays.clear();
+		mapOverlays.add(new LongTouchDetector());
+		
+		// Animate to...
+		GeoPoint curLoc;
+		ProfileTab.HomeLocationPref parser;
+		
+		try {
+			parser = new ProfileTab.HomeLocationPref(getIntent().getStringExtra("HomeLocationPref"));
+		} catch (Exception e) {
+			parser = null;
+		}
+		
+		if (parser == null) {
+			// ...the last known location
+			LocationManager locM = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+			String bestProvider = locM.getBestProvider(new Criteria(), true);
+			Location l = locM.getLastKnownLocation(bestProvider);
+			curLoc = new GeoPoint( (int)(l.getLatitude() * 1E6), (int)(l.getLongitude() * 1E6) );
+		} else {
+			// ...the home location
+			curLoc = new GeoPoint(parser.getLatitudeE6(), parser.getLongitudeE6());
+			mapMarker = new MapMarker(curLoc);
+			mapOverlays.add(mapMarker);
+		}
+		
+		if (curLoc != null) {
+			MapController ctrl = mMapView.getController();
+			
+			ctrl.animateTo(curLoc);
+			ctrl.setZoom(15);
+		}
+		
+		mMapView.postInvalidate();
+
+		mBtnSearch.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				try {
+					List<Address> addresses = geoCoder.getFromLocationName(mMapAddr.getText().toString(), 1);
+					
+					if (addresses.size() > 0) {
+						mMapView.getController().animateTo (
+								new GeoPoint(	(int)(addresses.get(0).getLatitude() * 1E6),
+												(int)(addresses.get(0).getLongitude() * 1E6) ));
+						mMapView.postInvalidate();
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	@Override
+	protected boolean isRouteDisplayed() {
+		return false;
+	}
+
+	public void onLongTouchMap(MotionEvent event, MapView mapView) {
+	    View contentView = getWindow().findViewById(Window.ID_ANDROID_CONTENT);
+		
+		GeoPoint point = mapView.getProjection().fromPixels(
+				(int)(event.getRawX()-contentView.getLeft()-mapView.getLeft()),
+				(int)(event.getRawY()-contentView.getTop()-mapView.getTop()) );
+		
+		try {
+			List<Address> addresses = geoCoder.getFromLocation( ((double)point.getLatitudeE6())/1E6, ((double)point.getLongitudeE6())/1E6, 1);
+			Intent intent = new Intent();
+			String address = "";
+			
+			if (addresses.size() > 0) {
+				address = addresses.get(0).getAddressLine(0);
+			}
+			
+			ProfileTab.HomeLocationPref parser = new ProfileTab.HomeLocationPref(point.getLatitudeE6(), point.getLongitudeE6(), address);
+			intent.putExtra("HomeLocationPref", parser.toString());
+			setResult(RESULT_OK, intent);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		
 		finish();
 	}
