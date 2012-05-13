@@ -122,15 +122,9 @@ public class HomeLocation extends MapActivity  {
 		
 		// Animate to...
 		GeoPoint curLoc;
-		ProfileTab.HomeLocationPref parser;
+		UserInfo.HomeLocationInfo homeLocIn = getIntent().getParcelableExtra("HomeLocationIn");
 		
-		try {
-			parser = new ProfileTab.HomeLocationPref(getIntent().getStringExtra("HomeLocationPref"));
-		} catch (Exception e) {
-			parser = null;
-		}
-		
-		if (parser == null) {
+		if (homeLocIn == null) {
 			// ...the last known location
 			LocationManager locM = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 			String bestProvider = locM.getBestProvider(new Criteria(), true);
@@ -138,7 +132,7 @@ public class HomeLocation extends MapActivity  {
 			curLoc = new GeoPoint( (int)(l.getLatitude() * 1E6), (int)(l.getLongitude() * 1E6) );
 		} else {
 			// ...the home location
-			curLoc = new GeoPoint(parser.getLatitudeE6(), parser.getLongitudeE6());
+			curLoc = new GeoPoint(homeLocIn.getLatitudeE6(), homeLocIn.getLongitudeE6());
 			mapMarker = new MapMarker(curLoc);
 			mapOverlays.add(mapMarker);
 		}
@@ -192,8 +186,8 @@ public class HomeLocation extends MapActivity  {
 				address = addresses.get(0).getAddressLine(0);
 			}
 			
-			ProfileTab.HomeLocationPref parser = new ProfileTab.HomeLocationPref(point.getLatitudeE6(), point.getLongitudeE6(), address);
-			intent.putExtra("HomeLocationPref", parser.toString());
+			UserInfo.HomeLocationInfo homeLocOut = new UserInfo.HomeLocationInfo(point.getLatitudeE6(), point.getLongitudeE6(), address);
+			intent.putExtra("HomeLocationOut", homeLocOut);
 			setResult(RESULT_OK, intent);
 		} catch (IOException e) {
 			e.printStackTrace();
