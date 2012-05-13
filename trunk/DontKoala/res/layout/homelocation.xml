@@ -4,26 +4,20 @@
     android:layout_height="match_parent"
     android:orientation="vertical" >
     
-	<com.google.android.maps.MapView xmlns:android="http://schemas.android.com/apk/res/android"
-		android:id="@+id/mapview"
-		android:layout_width="fill_parent"
-		android:layout_height="0px"
-		android:layout_weight="1"
-		android:clickable="true"
-		android:apiKey="0TfMmFYhnWyq5E-qlx_un186eCJD72vKHAGeo7g" />
-	
-	<LinearLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dip"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:layout_weight="0">
 
         <EditText
             android:id="@+id/mapAddress"
-            android:layout_width="wrap_content"
+            android:layout_width="0px"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:ems="10"
-            android:inputType="textPostalAddress" >
+            android:inputType="textPostalAddress"
+            android:layout_gravity="center">
 
             <requestFocus />
         </EditText>
@@ -32,8 +26,19 @@
             android:id="@+id/mapSearch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Search" />
+            android:layout_weight="0"
+            android:text="Search"
+            android:layout_gravity="center"/>
 
     </LinearLayout>
+    
+	<com.google.android.maps.MapView xmlns:android="http://schemas.android.com/apk/res/android"
+		android:id="@+id/mapview"
+		android:layout_width="fill_parent"
+		android:layout_height="0px"
+		android:layout_weight="1"
+		android:clickable="true"
+		android:apiKey="0TfMmFYhnWyq5E-qlx_un186eCJD72vKHAGeo7g" />
+	
+
 </LinearLayout>
