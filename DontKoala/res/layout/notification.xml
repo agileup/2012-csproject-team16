@@ -1,9 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical" >
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
     
-    
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	    android:layout_width="match_parent"
+	    android:layout_height="match_parent"
+	    android:orientation="vertical"
+	    android:layout_alignParentTop="true" >
+	    
+	    <TextView 
+	        android:layout_width="fill_parent"
+	        android:layout_height="25dp"
+	        android:text="  Touch to confirm detail information"
+	        android:textColor="#BEBEBE"
+	        android:background="#282828"
+	        android:textStyle="bold"
+	        android:gravity="left|center_vertical"
+	        android:singleLine="true"
+	    	/>
+	    
+	    <View android:layout_width="fill_parent" android:layout_height="0.5dip" android:background="#3c3c3c" />
+	    
+	    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	        android:orientation="horizontal"
+	        android:layout_width="fill_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_marginTop="5dp"
+	        android:layout_marginBottom="5dp"
+	        >
+		    <Button
+		        android:id="@+id/btn_c2dm_regist"
+		        android:layout_width="0dp"
+		        android:layout_height="wrap_content"
+		        android:layout_weight="1"
+		        android:text="푸쉬등록"
+		        android:textStyle="bold"
+		        />
+		    <Button
+		        android:id="@+id/btn_c2dm_unregist"
+		        android:layout_width="0dp"
+		        android:layout_height="wrap_content"
+		        android:layout_weight="1"
+		        android:text="푸쉬해제"
+		        android:textStyle="bold"
+		        />
+	    </LinearLayout>
 	
-</LinearLayout>
+	</LinearLayout>
+	
+	<ListView
+        android:id="@+id/noti_listview"
+        android:layout_width="fill_parent"
+    	android:layout_height="fill_parent"
+    	android:layout_marginTop="100dp" />
+	
+</RelativeLayout>
