@@ -21,17 +21,20 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.Color;
+import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.location.Location;
-import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Vibrator;
+import android.preference.PreferenceManager;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.View.OnClickListener;
@@ -50,6 +53,9 @@ public class GroupTab extends Activity implements SensorEventListener {
 
 	private TextView mResult;
 	private doGrouping mTask;
+	
+	private String user_name = null;
+	private String user_phone = null;
 	
 	// bump variable initialize
 	private long lastTime;
@@ -87,6 +93,11 @@ public class GroupTab extends Activity implements SensorEventListener {
         
 		mListView = (ListView)findViewById(R.id.main_listview);
 		
+		// 설정 정보 얻기 (이름 / 전화번호)
+		SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+		user_name = pref.getString("profile_name", "none");
+		user_phone = ((TelephonyManager)getSystemService(TELEPHONY_SERVICE)).getLine1Number();
+		
 		mTask = new doGrouping();
 		
 		mProgress = new ProgressDialog(GroupTab.this);
@@ -101,14 +112,22 @@ public class GroupTab extends Activity implements SensorEventListener {
 				mTask.cancel(false);
 			}
 		});
-		        
+		
+		mCheckAllBtn = (Button)findViewById(R.id.btn_select_all);
+		mCheckAllBtn.setEnabled(false);
+		mCheckNoneBtn = (Button)findViewById(R.id.btn_select_none);
+		mCheckNoneBtn.setEnabled(false); 
+		
         mSetGroupBtn = (Button)findViewById(R.id.btn_make_group);
         mSetGroupBtn.setOnClickListener(new Button.OnClickListener(){
 			@Override
 			public void onClick(View v) {
-				
-				new doGrouping().execute("홍길동", "01012345678");
-				
+				if (user_name == "none") {
+					Toast.makeText(v.getContext(), "Profile을 먼저 등록하세요", Toast.LENGTH_SHORT).show();
+				} else {
+					new doGrouping().execute(user_name, user_phone);
+					//Toast.makeText(v.getContext(), user_name+" / "+user_phone, Toast.LENGTH_SHORT).show();
+				}
 			}
         });
         
@@ -183,6 +202,29 @@ public class GroupTab extends Activity implements SensorEventListener {
 		}
 	}
 	
+	// 옵션 메뉴
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		menu.add(Menu.NONE, 0, Menu.NONE, "Group 초기화");
+		return true;
+	}
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+		menu.getItem(0).setEnabled(isShaking);
+		return super.onPrepareOptionsMenu(menu);
+	}
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+		case 0:
+			Toast.makeText(this, "초기화 해볼까?", 500).show();
+			
+			return true;
+		}
+		
+		return false;
+	}
+	
 	// AsyncTask
 	private class doGrouping extends AsyncTask<String, String, String> {
 		// AsyncTask가 execute 되자마자 UI스레드에서 실행됨
@@ -198,7 +240,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 			// execute(...)로 실행되는 콜백
 			// params[] : Name, Phone
 			String group_list = null;
-			for (int i=0; i<50 && !isShaking; i++) {
+			for (int i=0; i<30 && !isShaking; i++) {
 				try {
 					Thread.sleep(100);
 				} catch (InterruptedException e) {
@@ -206,6 +248,9 @@ public class GroupTab extends Activity implements SensorEventListener {
 				}
 			}
 			if (isShaking) {
+				// 쉐이킹 감지가 되면 진동으로 알려주고 서버로 전송
+				Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+				vibrator.vibrate(300);
 				publishProgress("그룹 확인 중입니다. 잠시만 기다려주세요.");
 				try {
 					// 서버에 접속해서 세션 설정
@@ -248,7 +293,6 @@ public class GroupTab extends Activity implements SensorEventListener {
 			} else {
 				// 그룹 생성에 성공한 경우 make 버튼을 disable 시키고
 				mSetGroupBtn.setEnabled(false);
-//				mArrayList.add(result);
 				
 				// arraylist에 하나씩 끊어서 추가해주고
 				Log.d("DEBUG", result);
@@ -256,6 +300,10 @@ public class GroupTab extends Activity implements SensorEventListener {
 		    	for (int i=0; i<group.length; i++) {
 		    		mArrayList.add(group[i]);
 		    	}
+
+//				mArrayList.add("최우혁");
+//				mArrayList.add("최진길");
+//				mArrayList.add("코알라");
 				
 		    	// 리스트뷰에 뿌려준다
 				mCustomAdapter = new CustomAdapter(GroupTab.this , mArrayList);
@@ -263,16 +311,15 @@ public class GroupTab extends Activity implements SensorEventListener {
 				mListView.setOnItemClickListener(mItemClickListener);
 				
 				// 전체선택/해제 버튼 리스너 등록
-				mCheckAllBtn = (Button)findViewById(R.id.btn_select_all);
+				mCheckAllBtn.setEnabled(true);
 				mCheckAllBtn.setOnClickListener(new OnClickListener() {
 					@Override
 					public void onClick(View v) {
 						mCustomAdapter.setAllChecked(true);
 						mCustomAdapter.notifyDataSetChanged();
-						Toast.makeText(v.getContext(), "all", Toast.LENGTH_SHORT).show();
 					}
 				});
-				mCheckNoneBtn = (Button)findViewById(R.id.btn_select_none);
+				mCheckNoneBtn.setEnabled(true);
 				mCheckNoneBtn.setOnClickListener(new OnClickListener() {
 					@Override
 					public void onClick(View v) {
@@ -347,7 +394,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 	private AdapterView.OnItemClickListener mItemClickListener = new AdapterView.OnItemClickListener() {
 		@Override
 		public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
-			Toast.makeText(getApplicationContext(), ""+(position+1), Toast.LENGTH_SHORT).show();
+			//Toast.makeText(getApplicationContext(), ""+(position+1), Toast.LENGTH_SHORT).show();
 			
 			mCustomAdapter.setChecked(position);
 			// Data 변경시 호출 Adapter에 Data 변경 사실을 알려줘서 Update 함.

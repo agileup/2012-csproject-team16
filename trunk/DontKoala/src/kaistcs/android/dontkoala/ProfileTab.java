@@ -8,6 +8,7 @@ import android.preference.CheckBoxPreference;
 import android.content.Intent;
 
 public class ProfileTab extends PreferenceActivity {
+
 	EditTextPreference mName;
 	Preference mHomeLocation;
 	Preference mEmergencyContacts;
