@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.preference.PreferenceManager;
+import android.telephony.TelephonyManager;
 
 /** SharedPreferences wrapper for accessing Profile (except ECN) */
 public class UserInfo {
@@ -29,6 +30,10 @@ public class UserInfo {
 		return sharedPref.edit().putString(NAME, newName).commit();
 	}
 	
+	public String getPhoneNumber() {
+		return ((TelephonyManager)mContext.getSystemService(Context.TELEPHONY_SERVICE)).getLine1Number();
+	}
+		
 	/** helper class for Home Location preference */
 	public static class HomeLocationInfo implements Parcelable {
 		private int latE6;
@@ -90,7 +95,7 @@ public class UserInfo {
 	}
 
 	public HomeLocationInfo getHomeLocation() {
-		String[] prefStrings = sharedPref.getString(HOME_LOCATION, "").split(",");
+		String[] prefStrings = sharedPref.getString(HOME_LOCATION, "").split(",", -1);
 		
 		if (prefStrings.length == 3)
 		{

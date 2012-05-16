@@ -24,12 +24,16 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.location.Geocoder;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.inputmethod.EditorInfo;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.TextView.OnEditorActionListener;
 
 public class HomeLocation extends MapActivity  {
 	private MapView mMapView;
@@ -163,6 +167,17 @@ public class HomeLocation extends MapActivity  {
 				}
 			}
 		});
+		
+		mMapAddr.setOnEditorActionListener(new OnEditorActionListener() {
+			@Override
+			public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+				if (actionId == EditorInfo.IME_ACTION_DONE || 
+						(event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+					mBtnSearch.performClick();
+				}
+				return true;
+			}
+		});
 	}
 
 	@Override
@@ -177,22 +192,24 @@ public class HomeLocation extends MapActivity  {
 				(int)(event.getRawX()-contentView.getLeft()-mapView.getLeft()),
 				(int)(event.getRawY()-contentView.getTop()-mapView.getTop()) );
 		
+		Intent intent = new Intent();
+		List<Address> addresses = null;
+		String address = "";
+		
 		try {
-			List<Address> addresses = geoCoder.getFromLocation( ((double)point.getLatitudeE6())/1E6, ((double)point.getLongitudeE6())/1E6, 1);
-			Intent intent = new Intent();
-			String address = "";
-			
-			if (addresses.size() > 0) {
-				address = addresses.get(0).getAddressLine(0);
-			}
-			
-			UserInfo.HomeLocationInfo homeLocOut = new UserInfo.HomeLocationInfo(point.getLatitudeE6(), point.getLongitudeE6(), address);
-			intent.putExtra("HomeLocationOut", homeLocOut);
-			setResult(RESULT_OK, intent);
+			addresses = geoCoder.getFromLocation( ((double)point.getLatitudeE6())/1E6, ((double)point.getLongitudeE6())/1E6, 1);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
+		if (addresses != null && addresses.size() > 0) {
+			address = addresses.get(0).getAddressLine(0);
+		}
+		
+		UserInfo.HomeLocationInfo homeLocOut = new UserInfo.HomeLocationInfo(point.getLatitudeE6(), point.getLongitudeE6(), address);
+		intent.putExtra("HomeLocationOut", homeLocOut);
+		setResult(RESULT_OK, intent);
+
 		finish();
 	}
 }
