@@ -45,6 +45,8 @@
         <activity android:name="NotificationTab"></activity>
         <activity android:name="EmergencyContacts" android:label="Edit Emergency Contacts"></activity>
         <activity android:name="HomeLocation" android:label="Long-touch your home location"></activity>
+        <activity android:name="NotificationActivity"></activity>
+        <service android:name="DetectionService"></service>
         
         <receiver
             android:name="C2DMReceiver"
@@ -58,7 +60,6 @@
                 <category android:name="kaistcs.android.dontkoala" />
             </intent-filter>
         </receiver>
-        <service android:name="DetectionService"></service>
 		
     </application>
     
