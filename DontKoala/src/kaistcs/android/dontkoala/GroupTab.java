@@ -20,7 +20,6 @@ import org.apache.http.protocol.HTTP;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -63,10 +62,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 	private float x, y, z;
 	private float last_x, last_y, last_z;
 	private static final int SHAKE_THRESHOLD = 1000;
-/*	private static final int DATA_X = SensorManager.DATA_X;
-	private static final int DATA_Y = SensorManager.DATA_Y;
-	private static final int DATA_Z = SensorManager.DATA_Z;
-*/	private SensorManager sensorMgr;
+	private SensorManager sensorMgr;
 	private Sensor accelerometerSensor;
 	int test_idx = 1;
 	private boolean isShaking = false;
@@ -79,13 +75,11 @@ public class GroupTab extends Activity implements SensorEventListener {
 	private Button mCheckAllBtn = null;
 	private Button mCheckNoneBtn = null;
 	
-	
 	/** Called when the activity is first created. */
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 	    super.onCreate(savedInstanceState);
-	
-	    // TODO Auto-generated method stub
+	    
         setContentView(R.layout.group);
         
         mResult = (TextView)findViewById(R.id.group_result);
@@ -105,6 +99,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 		mProgress.setTitle("Loading...");
 		mProgress.setIndeterminate(false);
 		mProgress.setCancelable(true);
+/*
 		mProgress.setButton("Cancel", new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
@@ -112,7 +107,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 				mTask.cancel(false);
 			}
 		});
-		
+*/	
 		mCheckAllBtn = (Button)findViewById(R.id.btn_select_all);
 		mCheckAllBtn.setEnabled(false);
 		mCheckNoneBtn = (Button)findViewById(R.id.btn_select_none);
@@ -162,13 +157,11 @@ public class GroupTab extends Activity implements SensorEventListener {
 
 	@Override
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
-		// TODO Auto-generated method stub
 		if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
 			long currTime = System.currentTimeMillis();
 			long diffTime = (currTime - lastTime);
@@ -300,10 +293,6 @@ public class GroupTab extends Activity implements SensorEventListener {
 		    	for (int i=0; i<group.length; i++) {
 		    		mArrayList.add(group[i]);
 		    	}
-
-//				mArrayList.add("최우혁");
-//				mArrayList.add("최진길");
-//				mArrayList.add("코알라");
 				
 		    	// 리스트뷰에 뿌려준다
 				mCustomAdapter = new CustomAdapter(GroupTab.this , mArrayList);

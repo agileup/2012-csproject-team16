@@ -35,16 +35,21 @@
 		        android:layout_height="wrap_content"
 		        android:layout_weight="1"
 		        android:text="푸쉬등록"
-		        android:textStyle="bold"
-		        />
+		        android:textStyle="bold" />
 		    <Button
 		        android:id="@+id/btn_c2dm_unregist"
 		        android:layout_width="0dp"
 		        android:layout_height="wrap_content"
 		        android:layout_weight="1"
 		        android:text="푸쉬해제"
-		        android:textStyle="bold"
-		        />
+		        android:textStyle="bold" />
+		    <Button
+		        android:id="@+id/btn_push"
+		        android:layout_width="0dp"
+		        android:layout_height="wrap_content"
+		        android:layout_weight="1"
+		        android:text="푸쉬보내기"
+		        android:textStyle="bold" />
 	    </LinearLayout>
 	
 	</LinearLayout>

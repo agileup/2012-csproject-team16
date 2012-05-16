@@ -6,8 +6,8 @@
  	
  	<ImageView 
  		android:id="@+id/resultIcon"  
-  		android:layout_width="60dp" 
-  		android:layout_height="60dp"
+  		android:layout_width="48dp" 
+  		android:layout_height="48dp"
   		android:padding="8dip"
   		android:layout_gravity="center_vertical" />
  	
@@ -22,8 +22,8 @@
 		    android:layout_width="wrap_content" 
 		    android:layout_height="wrap_content"
 		    android:textStyle="bold"
-		    android:textSize="9pt"
-		    android:padding="5dip" />
+		    android:textSize="8pt"
+		    android:padding="2dip" />
 	 	
 	 	<TextView  
 	 		android:id="@+id/resultTime"  
@@ -32,7 +32,7 @@
 		    android:textColor="#ccf88107"
 			android:textSize="6pt"
 			android:textStyle="bold"
-			android:padding="5dip" />
+			android:padding="2dip" />
 	 	
 	</LinearLayout>
 	    
