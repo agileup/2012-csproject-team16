@@ -41,6 +41,7 @@ class ECNCursorAdapter extends CursorAdapter {
 	}
 }
 
+// TODO: add ECN directly, not via the builtin contacts.
 public class EmergencyContacts extends Activity {
 	private EmergencyContactsDB mDB;
 	private Cursor mDBCursor; 
@@ -128,6 +129,7 @@ public class EmergencyContacts extends Activity {
 				return;
 			}
 			
+			// TODO: accept other numbers: home, or even 112
 			// Query mobile phone number
 			c = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
 					new String[]{ ContactsContract.CommonDataKinds.Phone.NUMBER }, 
