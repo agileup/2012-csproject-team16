@@ -58,6 +58,7 @@
                 <category android:name="kaistcs.android.dontkoala" />
             </intent-filter>
         </receiver>
+        <service android:name="DetectionService"></service>
 		
     </application>
     
