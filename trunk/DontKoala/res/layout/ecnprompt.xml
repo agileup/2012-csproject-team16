@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Name: "
+        android:textAppearance="?android:attr/textAppearanceLarge" android:layout_marginLeft="5dip"/>
+
+    <EditText
+        android:id="@+id/editName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPersonName" android:layout_marginBottom="10dip" android:layout_marginLeft="5dip" android:layout_marginRight="5dip">
+        <requestFocus />
+    </EditText>
+
+    <TextView
+        android:id="@+id/tvNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Phone number: "
+        android:textAppearance="?android:attr/textAppearanceLarge" android:layout_marginLeft="5dip"/>
+
+    <EditText
+        android:id="@+id/editNumber"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="phone" android:layout_marginLeft="5dip" android:layout_marginRight="5dip"/>
+
+</LinearLayout>

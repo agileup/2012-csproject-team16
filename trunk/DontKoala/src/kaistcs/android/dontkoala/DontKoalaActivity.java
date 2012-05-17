@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.widget.TabHost;
 import android.widget.TabHost.OnTabChangeListener;
 
+// TODO: change black UI to white
 public class DontKoalaActivity extends TabActivity implements OnTabChangeListener {
 	
 	// Variable Initialization

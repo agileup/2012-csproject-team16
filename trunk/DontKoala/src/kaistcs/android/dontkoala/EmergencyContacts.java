@@ -1,7 +1,12 @@
 package kaistcs.android.dontkoala;
 
+import java.util.ArrayList;
+
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -14,6 +19,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CursorAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -41,7 +47,6 @@ class ECNCursorAdapter extends CursorAdapter {
 	}
 }
 
-// TODO: add ECN directly, not via the builtin contacts.
 public class EmergencyContacts extends Activity {
 	private EmergencyContactsDB mDB;
 	private Cursor mDBCursor; 
@@ -49,9 +54,11 @@ public class EmergencyContacts extends Activity {
 	private ListView mListContacts;
 	private ECNCursorAdapter mListAdapter;
 	private Button mBtnAdd;
+	private Button mBtnAddManual;
 	private Button mBtnDel;
 	
 	private static final int CONTACT_PICK = 0;
+	private static final int InputDialog = 0;
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -70,6 +77,7 @@ public class EmergencyContacts extends Activity {
 		mListContacts.setItemsCanFocus(false);
 		
 		mBtnAdd = (Button)findViewById(R.id.btnAdd);
+		mBtnAddManual = (Button)findViewById(R.id.btnAddManual);
 		mBtnDel = (Button)findViewById(R.id.btnDel);
 		
 		mBtnAdd.setOnClickListener(new OnClickListener(){
@@ -77,6 +85,13 @@ public class EmergencyContacts extends Activity {
 			public void onClick(View v) {
 				Intent i = new Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI);
 				EmergencyContacts.this.startActivityForResult(i, CONTACT_PICK);
+			}
+		});
+		
+		mBtnAddManual.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				showDialog(InputDialog);
 			}
 		});
 		
@@ -98,6 +113,42 @@ public class EmergencyContacts extends Activity {
 	}
 	
 	@Override
+    protected Dialog onCreateDialog(int id)
+    {
+		if (id == InputDialog) {
+			LayoutInflater inflator = LayoutInflater.from(this);
+			final View dialogView = inflator.inflate(R.layout.ecnprompt, null);
+            
+			AlertDialog.Builder builder = new AlertDialog.Builder(this)
+						.setTitle("Enter emergency contact")
+						.setView(dialogView)
+						.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+							@Override
+							public void onClick(DialogInterface dialog, int whichButton) {
+								EditText editName = (EditText) dialogView.findViewById(R.id.editName);
+								EditText editNumber = (EditText) dialogView.findViewById(R.id.editNumber);
+								String name = editName.getText().toString();
+								String number = editNumber.getText().toString();
+								
+								if (name.isEmpty() == false && number.isEmpty() == false) {
+									mDB.addECN(name, number);
+								}
+								
+								stopManagingCursor(mDBCursor);
+								mDBCursor.close();
+								mDBCursor = mDB.queryAll();
+								startManagingCursor(mDBCursor);
+								mListAdapter.changeCursor(mDBCursor);
+							}
+						}).setNegativeButton("Cancel", null);
+			
+	        return builder.create();
+		}
+		
+		return null;
+    }
+	
+	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == CONTACT_PICK && resultCode == RESULT_OK) {
 			// Query contacts
@@ -112,7 +163,7 @@ public class EmergencyContacts extends Activity {
 			String contactKey = "";
 			String name = "";
 			String hasPhoneNum = "";
-			String phoneNumber = "";
+			ArrayList<String> phoneNumbers = new ArrayList<String>();
 			
 			try {
 				if (c.moveToFirst()) {
@@ -129,28 +180,61 @@ public class EmergencyContacts extends Activity {
 				return;
 			}
 			
-			// TODO: accept other numbers: home, or even 112
 			// Query mobile phone number
 			c = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
 					new String[]{ ContactsContract.CommonDataKinds.Phone.NUMBER }, 
-					ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY + "=? and " + ContactsContract.CommonDataKinds.Phone.TYPE + "=?",
-					new String[]{ contactKey, String.valueOf(ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE) },
+					ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY + "=?",
+					new String[]{ contactKey },
 					null);
 			
 			try {
-				if (c.moveToFirst())
-					phoneNumber = c.getString(c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+				c.moveToFirst();
+				
+				while (c.isAfterLast() == false) {
+					phoneNumbers.add( c.getString(c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)) );
+					c.moveToNext();
+				}
 			} finally {
 				c.close();
 			}
 			
-			if (name.isEmpty() == true || phoneNumber.isEmpty() == true) {
-				Toast.makeText(this, "No mobile phone number available", Toast.LENGTH_SHORT).show();
+			if (name.isEmpty() == true || phoneNumbers.isEmpty() == true) {
+				Toast.makeText(this, "No phone number available", Toast.LENGTH_SHORT).show();
 				return;
 			}
 			
-			phoneNumber = PhoneNumberUtils.formatNumber(phoneNumber);
-			mDB.addECN(name, phoneNumber);
+			if (phoneNumbers.size() == 1) {
+				mDB.addECN(name, phoneNumbers.get(0));
+				return;
+			}
+			
+			final String _name = name;
+			final String[] _phoneNumbers = new String[phoneNumbers.size()];
+			
+			int i = 0;
+			for (String s : phoneNumbers) {
+				_phoneNumbers[i] = s;
+				i++;
+			}
+						
+			AlertDialog.Builder builder = new AlertDialog.Builder(this)
+				.setTitle("Choose phone number")
+				.setSingleChoiceItems(_phoneNumbers, resultCode, new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						String phoneNumber = PhoneNumberUtils.formatNumber(_phoneNumbers[which]);
+						mDB.addECN(_name, phoneNumber);
+						
+						stopManagingCursor(mDBCursor);
+						mDBCursor.close();
+						mDBCursor = mDB.queryAll();
+						startManagingCursor(mDBCursor);
+						mListAdapter.changeCursor(mDBCursor);
+						dialog.dismiss();
+					}
+				});
+			
+			builder.show();
 		}
 	}
 }
