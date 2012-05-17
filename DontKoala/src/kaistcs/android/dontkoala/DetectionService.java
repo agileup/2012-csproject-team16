@@ -350,6 +350,9 @@ class SensorSMS extends AbstractSensor {
 					Object[] pdus = (Object[]) bundle.get("pdus");
 					msgs = new SmsMessage[pdus.length];            
 					
+					for (int i=0; i<msgs.length; i++)
+						msgs[i] = SmsMessage.createFromPdu((byte[]) pdus[i]);
+					
 					if (listener != null)
 						listener.onReceiveSMS(msgs);
 				}
@@ -807,7 +810,7 @@ class LostPhoneSituation extends AbstractSituation implements SensorSMS.OnReceiv
 		
 		if (mSensorSMS == null) {
 			mSensorSMS = new SensorSMS(mContext);
-			sensors.put(SensorBattery.NAME, mSensorSMS);
+			sensors.put(SensorSMS.NAME, mSensorSMS);
 		}
 		
 		userInfo = new UserInfo(mContext);
