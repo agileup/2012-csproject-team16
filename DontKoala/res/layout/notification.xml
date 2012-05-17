@@ -21,36 +21,6 @@
 	    	/>
 	    
 	    <View android:layout_width="fill_parent" android:layout_height="0.5dip" android:background="#3c3c3c" />
-	    
-	    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	        android:orientation="horizontal"
-	        android:layout_width="fill_parent"
-	        android:layout_height="wrap_content"
-	        android:layout_marginTop="5dp"
-	        android:layout_marginBottom="5dp"
-	        >
-		    <Button
-		        android:id="@+id/btn_c2dm_regist"
-		        android:layout_width="0dp"
-		        android:layout_height="wrap_content"
-		        android:layout_weight="1"
-		        android:text="푸쉬등록"
-		        android:textStyle="bold" />
-		    <Button
-		        android:id="@+id/btn_push"
-		        android:layout_width="0dp"
-		        android:layout_height="wrap_content"
-		        android:layout_weight="1"
-		        android:text="푸쉬보내기"
-		        android:textStyle="bold" />
-		    <Button
-		        android:id="@+id/btn_sms_send"
-		        android:layout_width="0dp"
-		        android:layout_height="wrap_content"
-		        android:layout_weight="1"
-		        android:text="SMS발송"
-		        android:textStyle="bold" />
-	    </LinearLayout>
 	
 	</LinearLayout>
 	
@@ -58,6 +28,6 @@
         android:id="@+id/noti_listview"
         android:layout_width="fill_parent"
     	android:layout_height="fill_parent"
-    	android:layout_marginTop="100dp" />
+    	android:layout_marginTop="30dp" />
 	
 </RelativeLayout>

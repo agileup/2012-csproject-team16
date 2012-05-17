@@ -15,6 +15,8 @@
             android:layout_alignParentLeft="true"
             android:layout_alignParentTop="true"
             android:text="Medium Text"
+            android:textSize="8pt"
+            android:textStyle="bold"
             android:textAppearance="?android:attr/textAppearanceMedium" android:layout_marginTop="3dip" android:layout_marginLeft="2dip" android:layout_marginBottom="1dip"/>
 
         <TextView
@@ -24,6 +26,8 @@
             android:layout_alignParentLeft="true"
             android:layout_below="@+id/tvPerson"
             android:text="Medium Text"
+            android:textSize="7pt"
+            android:textColor="#828282"
             android:textAppearance="?android:attr/textAppearanceMedium" android:layout_marginLeft="2dip"/>
 
         <ImageButton

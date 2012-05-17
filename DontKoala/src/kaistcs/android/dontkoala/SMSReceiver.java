@@ -11,11 +11,11 @@ public class SMSReceiver extends BroadcastReceiver {
 
 	protected static final String LOG_TAG = "SMSReceiver";
 	private static final String ACTION = "android.provider.Telephony.SMS_RECEIVED";
+	private static final String SMS_PUSH = "KOALA";
 	
 	@Override
 	public void onReceive(Context context, Intent intent) {
 		Log.i(LOG_TAG, "onReceive");
-		abortBroadcast();
 		
 		if (intent.getAction().equals(ACTION)) {
 			
@@ -34,12 +34,17 @@ public class SMSReceiver extends BroadcastReceiver {
 					String sendData = messages[0].getMessageBody().toString();
 					Log.i(LOG_TAG, "Number="+sendNum+" Msg="+sendData);
 					
-					Intent tmpIntent = new Intent(context, NotificationActivity.class);
-					tmpIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-					tmpIntent.putExtra("sendNum", sendNum);
-					tmpIntent.putExtra("sendData", sendData);
-					
-					context.startActivity(tmpIntent);
+					if (sendNum != null && sendData != null && sendData.contains(SMS_PUSH)) {
+						Intent tmpIntent = new Intent(context, NotificationActivity.class);
+						tmpIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //  | Intent.FLAG_ACTIVITY_SINGLE_TOP 
+						tmpIntent.putExtra("sendNum", sendNum);
+						tmpIntent.putExtra("sendData", sendData);
+						
+						context.startActivity(tmpIntent);
+						
+						// SMS PUSH 일 경우 문자안가도록 차단
+						abortBroadcast();
+					}
 				}
 				
 /*				for (SmsMessage currentMessage : messages) {
@@ -48,8 +53,6 @@ public class SMSReceiver extends BroadcastReceiver {
 				}
 */			}
 		}
-		
-		this.abortBroadcast();
 		
 	}
 }

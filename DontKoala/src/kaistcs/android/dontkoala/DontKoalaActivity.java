@@ -1,13 +1,12 @@
 package kaistcs.android.dontkoala;
 
-import android.app.PendingIntent;
 import android.app.TabActivity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.widget.TabHost;
-import android.widget.Toast;
 import android.widget.TabHost.OnTabChangeListener;
+import android.widget.Toast;
 
 // TODO: change black UI to white
 public class DontKoalaActivity extends TabActivity implements OnTabChangeListener {
@@ -23,6 +22,8 @@ public class DontKoalaActivity extends TabActivity implements OnTabChangeListene
         
         // 처음 로딩 페이지 띄우기
         startActivity(new Intent(this, SplashActivity.class));
+        
+        //Toast.makeText(getApplicationContext(), "DontKoalaActivity::onCreate()", Toast.LENGTH_SHORT).show();
         
         Intent lostIntent = new Intent(this, DetectionService.class);
         lostIntent.setAction(DetectionService.ACTION_START_LOST_PHONE);
@@ -66,20 +67,20 @@ public class DontKoalaActivity extends TabActivity implements OnTabChangeListene
 	@Override
 	protected void onResume() {
 		super.onResume();
-		
-		Toast.makeText(getApplicationContext(), "onResume()", Toast.LENGTH_SHORT).show();
+				
+		//Toast.makeText(getApplicationContext(), "DontKoalaActivity::onResume()", Toast.LENGTH_SHORT).show();
 	}
 	
 	@Override
 	protected void onNewIntent(Intent intent) {
 		super.onNewIntent(intent);
-		
+		//Toast.makeText(getApplicationContext(), "DontKoalaActivity::onNewIntent()", Toast.LENGTH_SHORT).show();
 		String tag = intent.getStringExtra("tag");
 		if (tag.equals("status")) {
-			Toast.makeText(getApplicationContext(), "status", Toast.LENGTH_SHORT).show();
+			//Toast.makeText(getApplicationContext(), "status", Toast.LENGTH_SHORT).show();
 			mTabHost.setCurrentTab(2);
 		} else if (tag.equals("dialog")) {
-			Toast.makeText(getApplicationContext(), "dialog", Toast.LENGTH_SHORT).show();
+			//Toast.makeText(getApplicationContext(), "dialog", Toast.LENGTH_SHORT).show();
 			mTabHost.setCurrentTab(2);
 		}
 	}

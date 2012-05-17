@@ -39,17 +39,28 @@ public class CustomizeDialog extends Dialog implements android.view.View.OnClick
         /** When OK Button is clicked, dismiss the dialog */  
         if (v == btn_ok) {
             dismiss();
+            Intent intent = new Intent();
+            intent.setAction("android.intent.action.MAIN");
+            intent.addCategory("android.intent.category.HOME");
+            intent.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+              | Intent.FLAG_ACTIVITY_FORWARD_RESULT
+              | Intent.FLAG_ACTIVITY_NEW_TASK
+              | Intent.FLAG_ACTIVITY_PREVIOUS_IS_TOP
+              | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+            mContext.startActivity(intent);
+            
         }
         else if (v == btn_detail) {
         	// NotificationTab 으로 이동 (아마 PendingIntent 로 해야할꺼같음)
         	dismiss();
         	
-        	Intent tmpIntent = new Intent(v.getContext(), DontKoalaActivity.class);
-			tmpIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        	Intent tmpIntent = new Intent(mContext, DontKoalaActivity.class);
+			tmpIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 			tmpIntent.putExtra("tag", "dialog");
-			v.getContext().startActivity(tmpIntent);
+			mContext.startActivity(tmpIntent);
         }
-    }  
+    }
+    
     @Override  
     public void setTitle(CharSequence title) {  
         super.setTitle(title);  
