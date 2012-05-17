@@ -23,6 +23,7 @@ import android.os.Bundle;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -802,6 +803,13 @@ class LostPhoneSituation extends AbstractSituation implements SensorSMS.OnReceiv
 	private SensorSMS mSensorSMS;
 	private UserInfo userInfo;
 	
+	/** Use this instead of AbstractSituation.onDetectSituation */
+	public interface OnLostPhoneListener {
+		public void onLostPhone(long wallTime, String sender);
+	}
+	
+	OnLostPhoneListener listener2;
+	
 	public LostPhoneSituation(Context context) {
 		mContext = context;
 	}
@@ -834,6 +842,10 @@ class LostPhoneSituation extends AbstractSituation implements SensorSMS.OnReceiv
 		Log.i(getName(), "stop()");
 		mSensorSMS.endListenSMS();
 	}
+	
+	public void setOnLostPhoneListener(OnLostPhoneListener l) {
+		listener2 = l;
+	}
 
 	@Override
 	public void onReceiveSMS(SmsMessage[] msgs) {
@@ -848,8 +860,8 @@ class LostPhoneSituation extends AbstractSituation implements SensorSMS.OnReceiv
 				
 				if (addr != null && body != null && body.contains(presetText)) {
 					Log.i(getName(), "Lost phone detected");
-					if (listener != null)
-						listener.onDetectSituation(LostPhoneSituation.this, System.currentTimeMillis(), null);
+					if (listener2 != null)
+						listener2.onLostPhone(System.currentTimeMillis(), addr);
 				}
 			}
 		}
@@ -857,7 +869,7 @@ class LostPhoneSituation extends AbstractSituation implements SensorSMS.OnReceiv
 }
 
 // TODO: resume service when restart
-public class DetectionService extends Service implements AbstractSituation.OnDetectSituationListener {
+public class DetectionService extends Service implements AbstractSituation.OnDetectSituationListener, LostPhoneSituation.OnLostPhoneListener {
 	private HashMap<String, AbstractSensor> sensors;
 	private GoHomeSituation goHome;
 	private KoalaSituation koala;
@@ -908,7 +920,7 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 			koala.stop();
 			lowBattery.stop();
 		} else if (action.equals(ACTION_START_LOST_PHONE)) {
-			lostPhone.setOnDetectSituation(this);
+			lostPhone.setOnLostPhoneListener(this);
 			
 			lostPhone.start();
 		} else if (action.equals(ACTION_STOP_LOST_PHONE)) {
@@ -929,5 +941,17 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 	@Override
 	public void onDetectSituation(AbstractSituation s, long wallTime, Location location) {
 		
+	}
+
+	@Override
+	public void onLostPhone(long wallTime, String sender) {
+		// FIXME: Just send GPS location
+		SensorGPS sensorGPS = (SensorGPS) sensors.get(SensorGPS.NAME);
+		if (sensorGPS.update() == true) {
+			Location l = sensorGPS.getData().getFirst().getLocation();
+			
+			SmsManager sms = SmsManager.getDefault();
+			sms.sendTextMessage(sender, null, "Latitude: " + l.getLatitude() + ", Longitude: " + l.getLongitude(), null, null);
+		}
 	}
 }
