@@ -38,6 +38,8 @@ import android.preference.PreferenceManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.View.OnClickListener;
@@ -93,10 +95,10 @@ public class NotificationTab extends Activity implements OnClickListener {
 				//Toast.makeText(getApplicationContext(), "상세보기로 넘어갑니다 (준비중)", 1000).show();
 				Intent detail = new Intent(getApplicationContext(), NotificationDetail.class);
 				detail.putExtra(NotificationDetail.PERSON_NAME, "최진길");
-				detail.putExtra(NotificationDetail.DESCRIPTION, "대한민국 대전광역시 온천2동");
+				detail.putExtra(NotificationDetail.DESCRIPTION, "대한민국 대전광역시 유성구 구성동 432");
 				detail.putExtra(NotificationDetail.PHONE_NUMBER, "01043888128");
-				detail.putExtra(NotificationDetail.LATITUDEE6, 36366642);
-				detail.putExtra(NotificationDetail.LONGITUDEE6, 127357326);
+				detail.putExtra(NotificationDetail.LATITUDEE6, 36367862);
+				detail.putExtra(NotificationDetail.LONGITUDEE6, 12736604);
 				startActivity(detail);
 			}
 		});	
@@ -338,5 +340,26 @@ public class NotificationTab extends Activity implements OnClickListener {
 	public void onClick(View v) {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		menu.add(Menu.NONE, 0, Menu.NONE, "꽐라 상태 전송");
+		return true;
+	}
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+		menu.getItem(0).setEnabled(true);
+		return super.onPrepareOptionsMenu(menu);
+	}
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+		case 0:
+			// 여기서 실행			
+			return true;
+		}
+		
+		return false;
 	}
 }
