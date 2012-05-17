@@ -3,6 +3,7 @@ package kaistcs.android.dontkoala;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -10,7 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -21,6 +21,7 @@ import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -45,8 +46,6 @@ public class NotificationTab extends Activity implements OnClickListener {
 	// result variable initialize
 	private ListView mResultView = null;
 	
-	CustomizeDialog customizeDialog = null;
-	
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -55,16 +54,12 @@ public class NotificationTab extends Activity implements OnClickListener {
         setContentView(R.layout.notification);
         
         Button btnRegist = (Button)findViewById(R.id.btn_c2dm_regist);
-        Button btnUnregist = (Button)findViewById(R.id.btn_c2dm_unregist);
+        Button btnUnregist = (Button)findViewById(R.id.btn_sms_send);
         btnRegist.setOnClickListener(this);
         btnUnregist.setOnClickListener(this);
         
         Button btnPush = (Button)findViewById(R.id.btn_push);
         btnPush.setOnClickListener(this);
-        
-        /** CustomizeAlertDialog */
-        View v = getWindow().getDecorView();
-        v.setBackgroundResource(android.R.color.transparent);
         
         mResultView = (ListView)findViewById(R.id.noti_listview);
         
@@ -85,42 +80,69 @@ public class NotificationTab extends Activity implements OnClickListener {
 			}
 		});	
 	}
+	
+	@Override
+	protected void onNewIntent(Intent intent) {
+		super.onNewIntent(intent);
+		
+		String sendNum = intent.getStringExtra("sendNum");
+		String sendData = intent.getStringExtra("sendData");
+
+		Toast.makeText(getApplicationContext(), "<"+sendNum+"> "+sendData, Toast.LENGTH_SHORT).show();
+	}
 
 	@Override
 	public void onClick(View v) {
 		switch (v.getId()) {
 		case R.id.btn_c2dm_regist:	
-			/**
-			 * Android C2DM에 push 메세지를 받겠다는 메세지를 보내는 Intent
-			 * 정상적으로 등록이되면 Android C2DM Server 쪽에서 인증키를 보내줌
-			 * 받아온 인증키는 해당 어플리케이션과 해당 기기를 대표하는 인증키로 서버에서 메세지를 보낼때 사용
-			 * 서버에 등록을 할 때마다 인증키는 달라진다
-			 */
-/*			Intent registrationIntent = new Intent("com.google.android.c2dm.intent.REGISTER");
-			registrationIntent.putExtra("app", PendingIntent.getBroadcast(this, 0, new Intent(), 0));
-			registrationIntent.putExtra("sender", mailAddr);
-			startService(registrationIntent);
-*/			
 			try {
 				requestRegistrationId();
-				authToken = getAuthToken();
+//				authToken = getAuthToken();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			URL url;
+			HttpURLConnection conn;
+			String receiveMsg = null;
+			try {
+				url = new URL("http://pemako.iptime.org/dontkoala/push.php");
+				conn = (HttpURLConnection)url.openConnection();
+				conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+				conn.setDoOutput(true);
+				conn.setDoInput(true);
+				conn.setRequestMethod("POST");
+				
+				String postData = "regID=" + C2DMReceiver.registration_id;
+				postData += "&msg=" + "FUCKYOU";
+				
+				OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+				wr.write(postData);
+				wr.flush();
+				
+				// 서버에서 받는 피드백
+				BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+				String line = null;
+				while ((line = rd.readLine()) != null) {
+					receiveMsg += line;
+				}
+				line = null;
+				
+				rd.close();
+				wr.close();
+				
+				Log.v("C2DM", "receiveMsg = " + receiveMsg);
+				
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			break;
-			
-		case R.id.btn_c2dm_unregist:
-			/** Android C2DM에 push 메세지를 그만 받겠다는 메세지를 보내는 Intent */
-/*			Intent unregIntent = new Intent("com.google.android.c2dm.intent.UNREGISTER");
-			unregIntent.putExtra("app", PendingIntent.getBroadcast(this, 0, new Intent(), 0));
-			startService(unregIntent); */
-			break;
-			
+						
 		case R.id.btn_push:
 			//startActivity(new Intent(this, NotificationActivity.class));
 			try {
 				//requestPush(REG_ID, "푸쉬테스트", "과연 정말로 가는거니?");
-				sender(C2DMReceiver.registration_id, authToken, "ALL THE SAME");
+				//sender(C2DMReceiver.registration_id, authToken, "ALL THE SAME");
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -138,11 +160,20 @@ public class NotificationTab extends Activity implements OnClickListener {
 		    notification.flags = notification.flags | notification.FLAG_AUTO_CANCEL;
 		    nm.notify(1234, notification);
 		    
-		    // AlertDialog 띄우기
-			customizeDialog = new CustomizeDialog(this);
-			customizeDialog.setTitle("DON'T KOALA");
-			customizeDialog.setMessage("최우혁님이 안전하게 귀가했습니다");
-			customizeDialog.show();
+			break;
+		
+		case R.id.btn_sms_send:
+			/** Android C2DM에 push 메세지를 그만 받겠다는 메세지를 보내는 Intent */
+			/* Intent unregIntent = new Intent("com.google.android.c2dm.intent.UNREGISTER");
+			unregIntent.putExtra("app", PendingIntent.getBroadcast(this, 0, new Intent(), 0));
+			startService(unregIntent); */
+			
+			String phone_no = ((TelephonyManager)getSystemService(TELEPHONY_SERVICE)).getLine1Number();
+			try {
+				sendSMSMessage(phone_no, "<DON'T KOALA> 테스트 메세지 입니다.");
+			} catch (Exception e) {
+				e.printStackTrace();
+	 		}
 			
 			break;
 			
@@ -159,37 +190,30 @@ public class NotificationTab extends Activity implements OnClickListener {
          * 여기서는 반복전송도 허용되게끔 매번 collapse_key를 랜덤함수로 뽑는다.
          */
         String collaspe_key = String.valueOf(Math.random() % 100 + 1);
- 
+        Log.v("C2DM", "collaspe_key = " + collaspe_key);
         // 보낼 메세지 조립
         StringBuffer postDataBuilder = new StringBuffer();
- 
         postDataBuilder.append("registration_id=" + registration_id);
         postDataBuilder.append("&collapse_key=" + collaspe_key); // 중복방지 필터
         postDataBuilder.append("&delay_while_idle=1");
-        postDataBuilder.append("&data.msg=" + URLEncoder.encode(msg, "UTF-8")); // 메세지                                                                          // 내용
- 
+        postDataBuilder.append("&data.msg=" + URLEncoder.encode(msg, "UTF-8")); // 메세지
         // 조립된 메세지를 Byte배열로 인코딩
         byte[] postData = postDataBuilder.toString().getBytes("UTF-8");
- 
         // HTTP 프로토콜로 통신한다.
         // 먼저 해당 url 커넥션을 선언하고 연다.
         URL url = new URL("https://android.apis.google.com/c2dm/send");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
- 
         conn.setDoOutput(true); // 출력설정
         conn.setUseCaches(false);
         conn.setRequestMethod("POST"); // POST 방식
         conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
         conn.setRequestProperty("Content-Length", Integer.toString(postData.length));
         conn.setRequestProperty("Authorization", "GoogleLogin auth=" + authToken);
- 
         // 출력스트림을 생성하여 postData를 기록.
         OutputStream out = conn.getOutputStream();
- 
         // 출력(송신)후 출력스트림 종료
         out.write(postData);
         out.close();
- 
         // 소켓의 입력스트림을 반환
         conn.getInputStream();
     }
@@ -206,6 +230,12 @@ public class NotificationTab extends Activity implements OnClickListener {
         shrdPref = null;
  
         if (registration_id == null) {
+        	/**
+        	 * Android C2DM에 push 메세지를 받겠다는 메세지를 보내는 Intent
+        	 * 정상적으로 등록이되면 Android C2DM Server 쪽에서 인증키를 보내줌
+        	 * 받아온 인증키는 해당 어플리케이션과 해당 기기를 대표하는 인증키로 서버에서 메세지를 보낼때 사용
+        	 * 서버에 등록을 할 때마다 인증키는 달라진다
+        	 */
             Intent registrationIntent = new Intent("com.google.android.c2dm.intent.REGISTER");
             // Application ID(Package Name)
             registrationIntent.putExtra("app", PendingIntent.getBroadcast(this, 0, new Intent(), 0));
@@ -291,6 +321,12 @@ public class NotificationTab extends Activity implements OnClickListener {
 		}
 	};
 */
+    // SMS send
+    protected void sendSMSMessage(String addr, String msg) throws Exception {
+    	android.telephony.SmsManager sms = android.telephony.SmsManager.getDefault();
+		sms.sendTextMessage(addr, null, msg, null, null);
+	}
+    
 	// Custom Adapter
 	class ResultAdapter extends BaseAdapter {
 

@@ -2,6 +2,7 @@ package kaistcs.android.dontkoala;
 
 import android.app.Dialog;
 import android.content.Context;
+import android.content.Intent;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
@@ -31,17 +32,22 @@ public class CustomizeDialog extends Dialog implements android.view.View.OnClick
         btn_ok.setOnClickListener(this);
         btn_detail = (Button) findViewById(R.id.DetailButton);
         btn_detail.setOnClickListener(this);
-    }  
+    }
+	
     @Override  
     public void onClick(View v) {  
         /** When OK Button is clicked, dismiss the dialog */  
         if (v == btn_ok) {
             dismiss();
-        	//PushWakeLock.releaseCpuLock();
         }
         else if (v == btn_detail) {
         	// NotificationTab 으로 이동 (아마 PendingIntent 로 해야할꺼같음)
         	dismiss();
+        	
+        	Intent tmpIntent = new Intent(v.getContext(), DontKoalaActivity.class);
+			tmpIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+			tmpIntent.putExtra("tag", "dialog");
+			v.getContext().startActivity(tmpIntent);
         }
     }  
     @Override  
