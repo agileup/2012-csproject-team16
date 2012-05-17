@@ -5,6 +5,7 @@ import android.preference.EditTextPreference;
 import android.preference.PreferenceActivity;
 import android.preference.Preference;
 import android.preference.CheckBoxPreference;
+import android.widget.Toast;
 import android.content.Intent;
 
 public class ProfileTab extends PreferenceActivity {

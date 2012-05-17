@@ -44,8 +44,8 @@
             </intent-filter>
         </activity>
         <activity android:name="SplashActivity" android:theme="@android:style/Theme.NoTitleBar"></activity>
-        <activity android:name="ProfileTab"></activity>
-        <activity android:name="GroupTab"></activity>
+        <activity android:name="ProfileTab" android:launchMode="singleTop"></activity>
+        <activity android:name="GroupTab" android:launchMode="singleTop"></activity>
         <activity android:name="NotificationTab" android:launchMode="singleTop"></activity>
         <activity android:name="EmergencyContacts" android:label="Edit Emergency Contacts"></activity>
         <activity android:name="HomeLocation" android:label="Long-touch your home location"></activity>
@@ -67,7 +67,7 @@
         </receiver>
         
         <receiver android:name="SMSReceiver">
-            <intent-filter>
+            <intent-filter android:priority="998">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>

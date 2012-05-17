@@ -1,6 +1,7 @@
 package kaistcs.android.dontkoala;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -9,6 +10,18 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HTTP;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.app.Activity;
 import android.app.Notification;
@@ -19,6 +32,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
+import android.net.ParseException;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.telephony.TelephonyManager;
@@ -46,287 +60,144 @@ public class NotificationTab extends Activity implements OnClickListener {
 	// result variable initialize
 	private ListView mResultView = null;
 	
+	private ResultAdapter adapter;
+	
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 	    super.onCreate(savedInstanceState);
 	
         setContentView(R.layout.notification);
-        
+/*        
         Button btnRegist = (Button)findViewById(R.id.btn_c2dm_regist);
         Button btnUnregist = (Button)findViewById(R.id.btn_sms_send);
         btnRegist.setOnClickListener(this);
         btnUnregist.setOnClickListener(this);
-        
         Button btnPush = (Button)findViewById(R.id.btn_push);
         btnPush.setOnClickListener(this);
-        
+*/        
         mResultView = (ListView)findViewById(R.id.noti_listview);
         
-        final ResultAdapter adapter = new ResultAdapter(this);
-        Resources res = getResources();
-        adapter.addItem(new ResultItem(res.getDrawable(R.drawable.warning), "최우혁님이 KOALA!", "12/05/10 AM 03:01"));
-        adapter.addItem(new ResultItem(res.getDrawable(R.drawable.safe), "코알라님이 안전하게 귀가했습니다", "12/05/09 PM 10:23"));
-		adapter.addItem(new ResultItem(res.getDrawable(R.drawable.safe), "최우혁님이 안전하게 귀가했습니다", "12/05/09 PM 10:03"));		
-		
-		mResultView.setAdapter(adapter);
+        //adapter = new ResultAdapter(this);
+        //Resources res = getResources();
+        //adapter.addItem(new ResultItem(res.getDrawable(R.drawable.safe), "최민기님이 안전하게 귀가했습니다", "12/05/17 PM 11:31"));
+        //adapter.addItem(new ResultItem(res.getDrawable(R.drawable.warning), "최진길님이 KOALA가 됐습니다!", "12/05/18 AM 01:19"));
+		//adapter.addItem(new ResultItem(res.getDrawable(R.drawable.safe), "최우혁님이 안전하게 귀가했습니다", "12/05/09 PM 10:03"));		
+		//mResultView.setAdapter(adapter);
 		mResultView.setOnItemClickListener(new OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
 				//IconTextItem  Item = (IconTextItem)adapter.getItem(arg2);
 				//String[] data = Item.getData();						
 				//Toast.makeText(getApplicationContext(),"국가 : " + data[0] + "\n" + "Nation : "+ data[1] +"\n"+ "피파순위 : "+ data[2] , 1).show();
-				Toast.makeText(getApplicationContext(), "상세보기로 넘어갑니다 (준비중)", 1000).show();
+				//Toast.makeText(getApplicationContext(), "상세보기로 넘어갑니다 (준비중)", 1000).show();
+				Intent detail = new Intent(getApplicationContext(), NotificationDetail.class);
+				detail.putExtra(NotificationDetail.PERSON_NAME, "최진길");
+				detail.putExtra(NotificationDetail.DESCRIPTION, "대한민국 대전광역시 온천2동");
+				detail.putExtra(NotificationDetail.PHONE_NUMBER, "01043888128");
+				detail.putExtra(NotificationDetail.LATITUDEE6, 36366642);
+				detail.putExtra(NotificationDetail.LONGITUDEE6, 127357326);
+				startActivity(detail);
 			}
 		});	
+	}
+	
+	@Override
+	protected void onResume() {
+		super.onResume();
+		String response_result = DownloadHtml("http://flclab.iptime.org/dontkoala/get_notification.php");
+		//Toast.makeText(getApplicationContext(), response_result, Toast.LENGTH_SHORT).show();
+		
+		JSONArray jArray;
+		
+		adapter = new ResultAdapter(this);
+		
+		// parsing data
+		String json_name;
+		int json_status;	// 꽐라:0, 귀가:1, 
+		String json_time;	// 12/05/17 PM 11:31
+		int json_lat;
+		int json_lon;
+		try {
+			jArray = new JSONArray(response_result);
+			JSONObject json_data = null;
+			for (int i=0; i<jArray.length(); i++) {
+				
+				json_data = jArray.getJSONObject(i);
+				json_name = json_data.getString("name");
+				json_status = json_data.getInt("status");
+				json_time = json_data.getString("create_time");
+				//json_lat = json_data.getInt("latitude");
+				//json_lon = json_data.getInt("longitude");
+				
+				//Toast.makeText(getApplicationContext(), json_name + " / " + json_time, Toast.LENGTH_SHORT).show();
+				
+				if (json_status == 0) {
+					String txt = json_name+"님이 KOALA가 됐습니다!";
+					adapter.addItem(new ResultItem(getResources().getDrawable(R.drawable.warning), txt, json_time));
+				}
+				else if (json_status == 1) {
+					String txt = json_name+"님이 안전하게 귀가했습니다";
+					adapter.addItem(new ResultItem(getResources().getDrawable(R.drawable.safe), txt, json_time));
+				}
+			}
+			
+		} catch (JSONException e) {
+			e.printStackTrace();
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
+		mResultView.setAdapter(adapter);
 	}
 	
 	@Override
 	protected void onNewIntent(Intent intent) {
 		super.onNewIntent(intent);
 		
-		String sendNum = intent.getStringExtra("sendNum");
-		String sendData = intent.getStringExtra("sendData");
-
-		Toast.makeText(getApplicationContext(), "<"+sendNum+"> "+sendData, Toast.LENGTH_SHORT).show();
-	}
-
-	@Override
-	public void onClick(View v) {
-		switch (v.getId()) {
-		case R.id.btn_c2dm_regist:	
-			try {
-				requestRegistrationId();
-//				authToken = getAuthToken();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			
-			URL url;
-			HttpURLConnection conn;
-			String receiveMsg = null;
-			try {
-				url = new URL("http://pemako.iptime.org/dontkoala/push.php");
-				conn = (HttpURLConnection)url.openConnection();
-				conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-				conn.setDoOutput(true);
-				conn.setDoInput(true);
-				conn.setRequestMethod("POST");
-				
-				String postData = "regID=" + C2DMReceiver.registration_id;
-				postData += "&msg=" + "FUCKYOU";
-				
-				OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
-				wr.write(postData);
-				wr.flush();
-				
-				// 서버에서 받는 피드백
-				BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-				String line = null;
-				while ((line = rd.readLine()) != null) {
-					receiveMsg += line;
-				}
-				line = null;
-				
-				rd.close();
-				wr.close();
-				
-				Log.v("C2DM", "receiveMsg = " + receiveMsg);
-				
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			break;
-						
-		case R.id.btn_push:
-			//startActivity(new Intent(this, NotificationActivity.class));
-			try {
-				//requestPush(REG_ID, "푸쉬테스트", "과연 정말로 가는거니?");
-				//sender(C2DMReceiver.registration_id, authToken, "ALL THE SAME");
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			
-			// Status bar에 알람 등록
-			NotificationManager nm;
-			nm = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-		    /** PendingIntent를 등록하고, noti를 클릭시에 어떤 클래스를 호출 할 것인지 등록 */
-		    PendingIntent intent = PendingIntent.getActivity(this, 0, new Intent(), 0);
-		    /** status bar에 등록될 메세지 (Ticker, icon, time) */
-		    Notification notification = new Notification(android.R.drawable.btn_star, "<돈꽐라> 알림입니다", System.currentTimeMillis());
-		    /** List에 표시될 항목 */
-		    notification.setLatestEventInfo(NotificationTab.this, "DON'T KOALA", "새로운 알림이 있습니다", intent);
-		    /** noti를 클릭할 경우 자동으로 제거 */
-		    notification.flags = notification.flags | notification.FLAG_AUTO_CANCEL;
-		    nm.notify(1234, notification);
-		    
-			break;
+		NotificationManager nm;
+		nm = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+		nm.cancel(1234);
+		//Toast.makeText(getApplicationContext(), "NotificationTab::onNewIntent()", Toast.LENGTH_SHORT).show();
 		
-		case R.id.btn_sms_send:
-			/** Android C2DM에 push 메세지를 그만 받겠다는 메세지를 보내는 Intent */
-			/* Intent unregIntent = new Intent("com.google.android.c2dm.intent.UNREGISTER");
-			unregIntent.putExtra("app", PendingIntent.getBroadcast(this, 0, new Intent(), 0));
-			startService(unregIntent); */
-			
-			String phone_no = ((TelephonyManager)getSystemService(TELEPHONY_SERVICE)).getLine1Number();
-			try {
-				sendSMSMessage(phone_no, "<DON'T KOALA> 테스트 메세지 입니다.");
-			} catch (Exception e) {
-				e.printStackTrace();
-	 		}
-			
-			break;
-			
-		default:
-			break;
+		//String sendNum = intent.getStringExtra("sendNum");
+		//Toast.makeText(getApplicationContext(), "<"+sendNum+">", Toast.LENGTH_SHORT).show();
+	}
+	
+	String DownloadHtml(String addr)
+	{
+		StringBuilder jsonHtml = new StringBuilder();
+		try
+		{
+			// 연결 url 설정
+			URL url = new URL(addr);
+			// 커넥션 객체 생성
+			HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+			// 연결되었으면.
+			if(conn != null){
+				conn.setConnectTimeout(10000);
+				conn.setUseCaches(false);
+				// 연결되었음 코드가 리턴되면.
+				if(conn.getResponseCode() == HttpURLConnection.HTTP_OK){
+					BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+					for(;;){
+						// 웹상에 보여지는 텍스트를 라인단위로 읽어 저장.  
+						String line = br.readLine();
+						if(line == null) break;
+						// 저장된 텍스트 라인을 jsonHtml에 붙여넣음
+						jsonHtml.append(line + "\n");
+					}
+					br.close();
+				}
+				conn.disconnect();
+			}
+		} catch(Exception ex) {
+			Toast.makeText(this, ex.getMessage(), Toast.LENGTH_LONG).show();
 		}
+		
+		return jsonHtml.toString();
 	}
 
-	/** C2DM으로 메세지를 보내는 메소드 */
-    public void sender(String registration_id, String authToken, String msg) throws Exception {
-    	/**
-         * collapse_key는 C2DM에서 사용자가 SEND 버튼을 실수로 여러번 눌렀을때
-         * 이전 메세지 내용과 비교해서 반복전송되는 것을 막기 위해서 사용된다.
-         * 여기서는 반복전송도 허용되게끔 매번 collapse_key를 랜덤함수로 뽑는다.
-         */
-        String collaspe_key = String.valueOf(Math.random() % 100 + 1);
-        Log.v("C2DM", "collaspe_key = " + collaspe_key);
-        // 보낼 메세지 조립
-        StringBuffer postDataBuilder = new StringBuffer();
-        postDataBuilder.append("registration_id=" + registration_id);
-        postDataBuilder.append("&collapse_key=" + collaspe_key); // 중복방지 필터
-        postDataBuilder.append("&delay_while_idle=1");
-        postDataBuilder.append("&data.msg=" + URLEncoder.encode(msg, "UTF-8")); // 메세지
-        // 조립된 메세지를 Byte배열로 인코딩
-        byte[] postData = postDataBuilder.toString().getBytes("UTF-8");
-        // HTTP 프로토콜로 통신한다.
-        // 먼저 해당 url 커넥션을 선언하고 연다.
-        URL url = new URL("https://android.apis.google.com/c2dm/send");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setDoOutput(true); // 출력설정
-        conn.setUseCaches(false);
-        conn.setRequestMethod("POST"); // POST 방식
-        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        conn.setRequestProperty("Content-Length", Integer.toString(postData.length));
-        conn.setRequestProperty("Authorization", "GoogleLogin auth=" + authToken);
-        // 출력스트림을 생성하여 postData를 기록.
-        OutputStream out = conn.getOutputStream();
-        // 출력(송신)후 출력스트림 종료
-        out.write(postData);
-        out.close();
-        // 소켓의 입력스트림을 반환
-        conn.getInputStream();
-    }
-	
-	/**
-     * Request for RegistrationID to C2DM Activity 시작시 구글 C2DM으로 Registration ID
-     * 발급을 요청한다. Registration ID를 발급받기 위해서는 Application ID, Sender ID가 필요.
-     * Registration ID는 Device를 대표하는 ID로써 한번만 받아서 저장하면 되기 때문에 매번 실행시 체크.
-     */
-    public void requestRegistrationId() throws Exception{
- 
-        SharedPreferences shrdPref = PreferenceManager.getDefaultSharedPreferences(this);
-        String registration_id = shrdPref.getString("registration_id", null);
-        shrdPref = null;
- 
-        if (registration_id == null) {
-        	/**
-        	 * Android C2DM에 push 메세지를 받겠다는 메세지를 보내는 Intent
-        	 * 정상적으로 등록이되면 Android C2DM Server 쪽에서 인증키를 보내줌
-        	 * 받아온 인증키는 해당 어플리케이션과 해당 기기를 대표하는 인증키로 서버에서 메세지를 보낼때 사용
-        	 * 서버에 등록을 할 때마다 인증키는 달라진다
-        	 */
-            Intent registrationIntent = new Intent("com.google.android.c2dm.intent.REGISTER");
-            // Application ID(Package Name)
-            registrationIntent.putExtra("app", PendingIntent.getBroadcast(this, 0, new Intent(), 0));
-            // Developer ID
-            registrationIntent.putExtra("sender", "akamk87@gmail.com");
-            // Start request.
-            startService(registrationIntent);
-        } else {
-            C2DMReceiver.registration_id = registration_id;
-            Log.v("C2DM", "Registration ID is Exist!");
-            Log.v("C2DM", "Registration ID : " + C2DMReceiver.registration_id);
-        }
-    }
-     
-    /**
-     * C2DM을 이용하기 위해서는 보안상 authToken(인증키)이 필요하다. 
-     * authToken도 역시 한 번만 받아놓고 저장한다음 쓰면 된다.
-     */
-    public String getAuthToken() throws Exception {
- 
-        SharedPreferences shrdPref = PreferenceManager.getDefaultSharedPreferences(this);
-        String authToken = shrdPref.getString("authToken", null);
- 
-        Log.v("C2DM", "AuthToken : " + authToken);
- 
-        if (authToken == null) {
-            StringBuffer postDataBuilder = new StringBuffer();
- 
-            postDataBuilder.append("accountType=HOSTED_OR_GOOGLE");
-            postDataBuilder.append("&Email=akamk87@gmail.com");
-            postDataBuilder.append("&Passwd=je8f37mk"); 
-            postDataBuilder.append("&service=ac2dm");
-            postDataBuilder.append("&source=androidpush-test. htcsensation-2.3");
- 
-            byte[] postData = postDataBuilder.toString().getBytes("UTF-8");
- 
-            URL url = new URL("https://www.google.com/accounts/ClientLogin");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
- 
-            conn.setDoOutput(true);
-            conn.setUseCaches(false);
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            conn.setRequestProperty("Content-Length", Integer.toString(postData.length));
- 
-            // 출력스트림을 생성하여 서버로 송신
-            OutputStream out = conn.getOutputStream();
-            out.write(postData);
-            out.close();
- 
-            // 서버로부터 수신받은 스트림 객체를 버퍼에 넣어 읽는다.
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
- 
-            String sIdLine = br.readLine();
-            String lsIdLine = br.readLine();
-            String authLine = br.readLine();
- 
-            Log.v("C2DM", sIdLine);
-            Log.v("C2DM", lsIdLine);
-            Log.v("C2DM", authLine);
- 
-            authToken = authLine.substring(5, authLine.length());
- 
-            SharedPreferences.Editor editor = shrdPref.edit();
-            editor.putString("authToken", authToken);
-            editor.commit();
-        }
- 
-        shrdPref = null;
-        return authToken;
-    }
-	
-/*	
-	// ListView 안에 Item을 클릭시에 호출되는 Listener
-	private AdapterView.OnItemClickListener mItemClickListener = new AdapterView.OnItemClickListener() {
-		@Override
-		public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
-			//Toast.makeText(getApplicationContext(), ""+(position+1), Toast.LENGTH_SHORT).show();
-			
-			mCustomAdapter.setChecked(position);
-			// Data 변경시 호출 Adapter에 Data 변경 사실을 알려줘서 Update 함.
-			mCustomAdapter.notifyDataSetChanged();
-		}
-	};
-*/
-    // SMS send
-    protected void sendSMSMessage(String addr, String msg) throws Exception {
-    	android.telephony.SmsManager sms = android.telephony.SmsManager.getDefault();
-		sms.sendTextMessage(addr, null, msg, null, null);
-	}
-    
 	// Custom Adapter
 	class ResultAdapter extends BaseAdapter {
 
@@ -461,5 +332,11 @@ public class NotificationTab extends Activity implements OnClickListener {
 		public void setTime(String mTime) {
 			this.mTime = mTime;
 		}
+	}
+
+	@Override
+	public void onClick(View v) {
+		// TODO Auto-generated method stub
+		
 	}
 }

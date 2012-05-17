@@ -3,11 +3,11 @@ package kaistcs.android.dontkoala;
 import java.util.List;
 
 import com.google.android.maps.GeoPoint;
+import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapController;
 import com.google.android.maps.MapView;
 import com.google.android.maps.Overlay;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -20,7 +20,7 @@ import android.view.View.OnClickListener;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
-public class NotificationDetail extends Activity {
+public class NotificationDetail extends MapActivity {
 	public static final String PERSON_NAME = "PERSON_NAME";
 	public static final String DESCRIPTION = "DESCRIPTION";
 	public static final String PHONE_NUMBER = "PHONE_NUMBER";
@@ -96,5 +96,11 @@ public class NotificationDetail extends Activity {
 			canvas.drawBitmap(markerBmp, screenPts.x-markerBmp.getWidth()/2, screenPts.y-markerBmp.getHeight(), null);         
 			return true;
 		}
+	}
+
+	@Override
+	protected boolean isRouteDisplayed() {
+		// TODO Auto-generated method stub
+		return false;
 	}
 }

@@ -20,7 +20,6 @@ import org.apache.http.protocol.HTTP;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -28,7 +27,6 @@ import android.hardware.SensorManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.preference.PreferenceManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -45,10 +43,11 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class GroupTab extends Activity implements SensorEventListener {
+public class GroupTab extends Activity implements SensorEventListener, OnClickListener {
 	
 	//private Handler mHandler;
 	private ProgressDialog mProgress;
+	private UserInfo userInfo = null;
 
 	private TextView mResult;
 	private doGrouping mTask;
@@ -88,8 +87,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 		mListView = (ListView)findViewById(R.id.main_listview);
 		
 		// 설정 정보 얻기 (이름 / 전화번호)
-		SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
-		user_name = pref.getString("profile_name", "none");
+		userInfo = new UserInfo(getApplicationContext());
 		user_phone = ((TelephonyManager)getSystemService(TELEPHONY_SERVICE)).getLine1Number();
 		
 		mTask = new doGrouping();
@@ -114,17 +112,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 		mCheckNoneBtn.setEnabled(false); 
 		
         mSetGroupBtn = (Button)findViewById(R.id.btn_make_group);
-        mSetGroupBtn.setOnClickListener(new Button.OnClickListener(){
-			@Override
-			public void onClick(View v) {
-				if (user_name == "none") {
-					Toast.makeText(v.getContext(), "Profile을 먼저 등록하세요", Toast.LENGTH_SHORT).show();
-				} else {
-					new doGrouping().execute(user_name, user_phone);
-					//Toast.makeText(v.getContext(), user_name+" / "+user_phone, Toast.LENGTH_SHORT).show();
-				}
-			}
-        });
+        mSetGroupBtn.setOnClickListener(this);
         
         // start motion detection
         sensorMgr = (SensorManager)getSystemService(SENSOR_SERVICE);
@@ -134,6 +122,30 @@ public class GroupTab extends Activity implements SensorEventListener {
         //GPSProvider gps = new GPSProvider(locManager);
         
         //double longitude = gps.getLongitude();
+	}
+
+	@Override
+	public void onClick(View v) {
+		switch (v.getId()) {
+		case R.id.btn_make_group:
+			if (user_name == "") {
+				Toast.makeText(v.getContext(), "Profile을 먼저 등록하세요", Toast.LENGTH_SHORT).show();
+			} else {
+				new doGrouping().execute(user_name, user_phone);
+				//Toast.makeText(v.getContext(), user_name+" / "+user_phone, Toast.LENGTH_SHORT).show();
+			}
+			break;
+
+		default:
+			break;
+		}
+	}
+	
+	@Override
+	protected void onResume() {
+		super.onResume();		
+		user_name = userInfo.getName();
+		//Toast.makeText(getApplicationContext(), user_name, 1000).show();
 	}
 	
 	@Override
@@ -233,7 +245,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 			// execute(...)로 실행되는 콜백
 			// params[] : Name, Phone
 			String group_list = null;
-			for (int i=0; i<30 && !isShaking; i++) {
+			for (int i=0; i<40 && !isShaking; i++) {
 				try {
 					Thread.sleep(100);
 				} catch (InterruptedException e) {
@@ -241,7 +253,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 				}
 			}
 			if (isShaking) {
-				// 쉐이킹 감지가 되면 진동으로 알려주고 서버로 전송
+				// 쉐이킹 감지 되면 진동으로 알려주고 서버로 전송
 				Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
 				vibrator.vibrate(300);
 				publishProgress("그룹 확인 중입니다. 잠시만 기다려주세요.");
@@ -337,7 +349,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 			nameValue.add(new BasicNameValuePair("phone", params[1]));
 			
 			HttpClient client = new DefaultHttpClient();
-			HttpPost request = new HttpPost("http://pemako.iptime.org/dontkoala/set_group.php");
+			HttpPost request = new HttpPost("http://flclab.iptime.org/dontkoala/set_group.php");
 			request.setEntity(new UrlEncodedFormEntity(nameValue, HTTP.UTF_8));
 			client.execute(request);
 			
@@ -356,7 +368,7 @@ public class GroupTab extends Activity implements SensorEventListener {
 			nameValue.add(new BasicNameValuePair("me", param));
 			
 			HttpClient client = new DefaultHttpClient();
-			HttpPost request = new HttpPost("http://pemako.iptime.org/dontkoala/get_group.php");
+			HttpPost request = new HttpPost("http://flclab.iptime.org/dontkoala/get_group.php");
 			request.setEntity(new UrlEncodedFormEntity(nameValue, HTTP.UTF_8));
 			HttpResponse response = client.execute(request);
 			HttpEntity entity = response.getEntity();
