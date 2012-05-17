@@ -134,7 +134,8 @@ public class HomeLocation extends MapActivity  {
 			String bestProvider = locM.getBestProvider(new Criteria(), true);
 			if (bestProvider != null) {
 				Location l = locM.getLastKnownLocation(bestProvider);
-				curLoc = new GeoPoint( (int)(l.getLatitude() * 1E6), (int)(l.getLongitude() * 1E6) );
+				if (l != null)
+					curLoc = new GeoPoint( (int)(l.getLatitude() * 1E6), (int)(l.getLongitude() * 1E6) );
 			}
 		} else {
 			// ...the home location
