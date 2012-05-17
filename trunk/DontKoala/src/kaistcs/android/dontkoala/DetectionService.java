@@ -68,7 +68,7 @@ abstract class AbstractSituation {
 	/** detection callback.
 	 * @param location: null if it is not available.*/
 	public interface OnDetectSituationListener {
-		public void onDetectSituation(AbstractSituation s, long wallTime, Location location);
+		public void onDetectSituation(AbstractSituation s, long wallTime, int[] latLongE6);
 	}
 	
 	OnDetectSituationListener listener;
@@ -168,7 +168,7 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 			Location location = minEvent.getLocation();
 			Log.i(getName(), 
 					"lat: " + location.getLatitude() + ", " + "long: " + location.getLongitude() + ", " +
-					"acc: " + location.hasAccuracy() + ", " + "acc_value: " + location.getAccuracy() +
+					"acc: " + location.hasAccuracy() + ", " + "acc_value: " + location.getAccuracy() + ", " +
 					"spd: " + location.hasSpeed() + ", " + "spd_value: " + location.getSpeed());
 			
 			data.add(minEvent);
@@ -679,8 +679,12 @@ class KoalaSituation extends AbstractSituation implements OnTouchListener {
 				
 				if (bKoala == true) {
 					Log.i(getName(), "Koala Detected");
-					if (listener != null)
-						listener.onDetectSituation(KoalaSituation.this, System.currentTimeMillis(), e.getLocation());
+					if (listener != null) {
+						int[] latLongE6 = new int [2];
+						latLongE6[0] = (int) (e.getLocation().getLatitude() * 1E6);
+						latLongE6[1] = (int) (e.getLocation().getLongitude() * 1E6);
+						listener.onDetectSituation(KoalaSituation.this, System.currentTimeMillis(), latLongE6);
+					}
 				}
 				
 				long delayMillis = UPDATE_INTERVAL;
@@ -920,6 +924,11 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 	public static final String ACTION_START_LOST_PHONE = "kaistcs.android.dontkoala.START_LOST_PHONE";
 	public static final String ACTION_STOP_LOST_PHONE = "kaistcs.android.dontkoala.STOP_LOST_PHONE";
 	
+	public static final String ACTION_MOCK_GOHOME = "kaistcs.android.dontkoala.MOCK_GOHOME";
+	public static final String ACTION_MOCK_KOALA = "kaistcs.android.dontkoala.MOCK_KOALA";
+	public static final String MOCK_LOCATION_LATE6 = "MOCK_LOCATION_LATE6";
+	public static final String MOCK_LOCATION_LONGE6 = "MOCK_LOCATION_LONGE6";
+	
 	@Override
 	public IBinder onBind(Intent arg0) {
 		return null;
@@ -967,6 +976,14 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 				lostPhone.start();
 			} else if (action.equals(ACTION_STOP_LOST_PHONE)) {
 				lostPhone.stop();
+			} else if (action.equals(ACTION_MOCK_GOHOME)) {
+				onDetectSituation(goHome, System.currentTimeMillis(), null);
+			} else if (action.equals(ACTION_MOCK_KOALA)) {
+				int[] latLongE6 = new int [2];
+				latLongE6[0] = intent.getIntExtra(MOCK_LOCATION_LATE6, 0);
+				latLongE6[1] = intent.getIntExtra(MOCK_LOCATION_LONGE6, 0);
+				
+				onDetectSituation(koala, System.currentTimeMillis(), latLongE6);
 			}
 		}
 		
@@ -983,8 +1000,8 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 	}
 
 	@Override
-	public void onDetectSituation(AbstractSituation s, long wallTime, Location location) {
-		
+	public void onDetectSituation(AbstractSituation s, long wallTime, int[] latLongE6) {
+		Log.i("DetectionService", "onDetectSituation(s: " + s.getName() + ", latE6: " + latLongE6[0] + ", longE6: " + latLongE6[1] + ")");
 	}
 
 	@Override
@@ -992,8 +1009,9 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 		// FIXME: Just send GPS location
 		SensorGPS sensorGPS = (SensorGPS) sensors.get(SensorGPS.NAME);
 		if (sensorGPS.update() == true) {
-			Location l = sensorGPS.getData().getFirst().getLocation();
+			Log.i("DetectionService", "onLostPhone(sender: " + sender + ")");
 			
+			Location l = sensorGPS.getData().getFirst().getLocation();
 			SmsManager sms = SmsManager.getDefault();
 			sms.sendTextMessage(sender, null, "Latitude: " + l.getLatitude() + ", Longitude: " + l.getLongitude(), null, null);
 		}
