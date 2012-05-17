@@ -20,7 +20,14 @@
             android:layout_width="100dip"
             android:layout_height="wrap_content"
             android:text="Add"
-            android:layout_marginRight="10dip" />
+            android:layout_marginRight="1dip" />
+        
+        <Button
+            android:id="@+id/btnAddManual"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add Manually"
+            android:layout_marginRight="1dip" />
 
         <Button
             android:id="@+id/btnDel"
