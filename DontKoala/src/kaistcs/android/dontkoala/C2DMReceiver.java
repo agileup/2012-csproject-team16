@@ -1,13 +1,14 @@
 package kaistcs.android.dontkoala;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.Gravity;
-import android.widget.Toast;
 
 public class C2DMReceiver extends BroadcastReceiver {
 	
@@ -24,10 +25,10 @@ public class C2DMReceiver extends BroadcastReceiver {
 	    }
 	    else if (intent.getAction().equals("com.google.android.c2dm.intent.RECEIVE")) {
 	    	handleMessage(context, intent);
-	    	Toast toast = Toast.makeText(context, intent.getStringExtra("msg"), Toast.LENGTH_SHORT);
+/*	    	Toast toast = Toast.makeText(context, intent.getStringExtra("msg"), Toast.LENGTH_SHORT);
 	    	toast.setGravity(Gravity.TOP | Gravity.CENTER, 0, 150);
 	    	toast.show();
-	    }
+*/	    }
 	}
 	
 	private void handleRegistration(Context context, Intent intent) {
