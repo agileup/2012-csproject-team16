@@ -584,7 +584,7 @@ class KoalaSituation extends AbstractSituation implements OnTouchListener {
 	/** Use the latest location if it is not too old */
 	private static final int INTERLEAVE_DELAY = 60 * 1000;
 	private static final int UPDATE_INTERVAL = 10 * 60 * 1000;
-	private static final int KOALA_INTERVAL = 1 * 60 * 1000;
+	private static final int KOALA_INTERVAL = 40 * 60 * 1000;
 	private static final int MOVE_THRESHOLD = 80;
 
 	public KoalaSituation(Context context) {
