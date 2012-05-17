@@ -158,7 +158,8 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 		updateResult = true;
 		Log.i(getName(), 
 				"lat: " + location.getLatitude() + ", " + "long: " + location.getLongitude() + ", " +
-				"acc: " + location.hasAccuracy() + ", " + "value: " + location.getAccuracy());
+				"acc: " + location.hasAccuracy() + ", " + "acc_value: " + location.getAccuracy() +
+				"spd: " + location.hasSpeed() + ", " + "spd_value: " + location.getSpeed());
 		
 		// Try to achieve the given accuracy
 		if (location.hasAccuracy() == false || location.getAccuracy() <= ACCURACY_THRESHOLD) {
@@ -169,6 +170,7 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 
 	@Override
 	public void onProviderDisabled(String provider) {
+		data.addFirst(new LocationEvent(null));
 		locM.removeUpdates(this);
 		updateThread.quit();
 	}
@@ -480,6 +482,7 @@ class GoHomeSituation extends AbstractSituation {
 						
 						float speed = loc.getSpeed();
 						if (dist[0] < oldDist[0] && dist[0]/speed < UPDATE_INTERVAL_MAX/1000) {
+							Log.i(GoHomeSituation.this.getName(), "adjust update time by speed: " + speed + "m/s");
 							delayMillis = ((long) ( (dist[0]/2)/speed )) * 1000;
 							if (delayMillis < UPDATE_INTERVAL_MIN/1000) {
 								delayMillis = UPDATE_INTERVAL_MIN;
@@ -683,7 +686,7 @@ class KoalaSituation extends AbstractSituation implements OnTouchListener {
 	
 	@Override
 	public boolean onTouch(View v, MotionEvent event) {
-		Log.i(getName(), "onTouch(), next touch in: " + KOALA_INTERVAL);
+		Log.i(getName(), "onTouch(), next touch in: " + KOALA_INTERVAL + "ms");
 		mSensorTouch.endListenTouch();
 		mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + KOALA_INTERVAL, pendingTouch);
 		return false;
