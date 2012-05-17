@@ -1,5 +1,6 @@
 package kaistcs.android.dontkoala;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -12,6 +13,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
 import android.graphics.PixelFormat;
 import android.location.Location;
 import android.location.LocationListener;
@@ -20,6 +22,7 @@ import android.location.LocationProvider;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.SystemClock;
@@ -143,6 +146,8 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 			e.printStackTrace();
 		}
 		
+		updateThread.quit();
+		
 		if (updateResult == false) {
 			Log.i(getName(), "No GPS Signal");
 			data.addFirst(new LocationEvent(null));
@@ -171,7 +176,7 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 					"acc: " + location.hasAccuracy() + ", " + "acc_value: " + location.getAccuracy() + ", " +
 					"spd: " + location.hasSpeed() + ", " + "spd_value: " + location.getSpeed());
 			
-			data.add(minEvent);
+			data.addFirst(minEvent);
 		}
 		
 		if (updateThread.isAlive())
@@ -429,8 +434,8 @@ class GoHomeSituation extends AbstractSituation {
 	private static final String UPDATE_ACTION = "kaistcs.android.dontkoala.GoHome_UPDATE";
 	
 	/** Use the latest location if it is not too old */
-	private static final int INTERLEAVE_DELAY = 60 * 1000;
-	private static final int UPDATE_INTERVAL_MAX = 10 * 60 * 1000;
+	private static final int INTERLEAVE_DELAY = 5 *1000;//60 * 1000;
+	private static final int UPDATE_INTERVAL_MAX = 15 *1000;//10 * 60 * 1000;
 	private static final int UPDATE_INTERVAL_MIN = 0 * 1000;
 	private static final int HOMELOC_DIST_THRESHOLD = 30;
 	
@@ -459,76 +464,90 @@ class GoHomeSituation extends AbstractSituation {
 		public void onReceive(Context context, Intent intent) {
 			Log.i(getName(), "onReceive()");
 			
-			synchronized (mSensorGPS) {
-				UserInfo.HomeLocationInfo home = mUserInfo.getHomeLocation();
-				long delayMillis = UPDATE_INTERVAL_MAX;
-				
-				if (home != null) {
-					LinkedList<SensorGPS.LocationEvent> l = mSensorGPS.getData();
-					SensorGPS.LocationEvent e = null; 
-					
-					// Get the last known location
-					if (l.isEmpty() == false)
-						e = l.getFirst();
-					
-					// Update if it is not available or too old
-					if (e == null || SystemClock.elapsedRealtime() - e.realTime >= INTERLEAVE_DELAY) {
-						if (mSensorGPS.update() == true)
-							e = mSensorGPS.getData().getFirst();
-					}
-					
-					// If a GPS fix occurs...
-					if (e != null) {
-						Location loc = e.getLocation();
-						float[] dist = new float[1];
-						Location.distanceBetween(
-								loc.getLatitude(), loc.getLongitude(),
-								((double)home.getLatitudeE6()) / 1E6, ((double)home.getLongitudeE6()) / 1E6, dist);
+			Thread taskThread = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					synchronized (mSensorGPS) {
+						UserInfo.HomeLocationInfo home = mUserInfo.getHomeLocation();
+						long delayMillis = UPDATE_INTERVAL_MAX;
 						
-						Log.i(GoHomeSituation.this.getName(), "dist to home: " + dist[0]);
-						
-						// Arrived home
-						if (dist[0] <= HOMELOC_DIST_THRESHOLD) {
-							Log.i(GoHomeSituation.this.getName(), "arrived home!" + dist[0]);
-							if (listener != null)
-								listener.onDetectSituation(GoHomeSituation.this, System.currentTimeMillis(), null);
-							// No more update
-							return;
-						}
-						
-						// Adjust delayMillis by the speed if home is getting closer
-						if (loc.hasSpeed() == true) {
-							float[] oldDist = new float[1];
-							oldDist[0] = -1;	// If oldDist is not available, do not adjust
+						if (home != null) {
+							LinkedList<SensorGPS.LocationEvent> l = mSensorGPS.getData();
+							SensorGPS.LocationEvent e = null; 
 							
-							Iterator<SensorGPS.LocationEvent> it = l.iterator();
-							if (it.hasNext() == true) it.next();
-							while (it.hasNext()) {
-								SensorGPS.LocationEvent cur = it.next();
-								if (cur.getLocation() != null) {
-									Location.distanceBetween(
-											cur.getLocation().getLatitude(), cur.getLocation().getLongitude(),
-											((double)home.getLatitudeE6()) / 1E6, ((double)home.getLongitudeE6()) / 1E6, oldDist);
-								}
+							// Get the last known location
+							if (l.isEmpty() == false)
+								e = l.getFirst();
+							
+							// Update if it is not available or too old
+							if (e == null || SystemClock.elapsedRealtime() - e.realTime >= INTERLEAVE_DELAY) {
+								if (mSensorGPS.update() == true)
+									e = mSensorGPS.getData().getFirst();
 							}
 							
-							float speed = loc.getSpeed();
-							if (dist[0] < oldDist[0] && dist[0]/speed < UPDATE_INTERVAL_MAX/1000) {
-								Log.i(GoHomeSituation.this.getName(), "adjust update time by speed: " + speed + "m/s");
-								delayMillis = ((long) ( (dist[0]/2)/speed )) * 1000;
-								if (delayMillis < UPDATE_INTERVAL_MIN/1000) {
-									delayMillis = UPDATE_INTERVAL_MIN;
+							// If a GPS fix occurs...
+							if (e != null) {
+								Location loc = e.getLocation();
+								float[] dist = new float[1];
+								Location.distanceBetween(
+										loc.getLatitude(), loc.getLongitude(),
+										((double)home.getLatitudeE6()) / 1E6, ((double)home.getLongitudeE6()) / 1E6, dist);
+								
+								Log.i(GoHomeSituation.this.getName(), "dist to home: " + dist[0]);
+								
+								// Arrived home
+								if (dist[0] <= HOMELOC_DIST_THRESHOLD) {
+									Log.i(GoHomeSituation.this.getName(), "arrived home!" + dist[0]);
+									if (listener != null) {
+										Handler handler = new Handler(mContext.getMainLooper());
+										handler.post(new Runnable() {
+											@Override
+											public void run() {
+												listener.onDetectSituation(GoHomeSituation.this, System.currentTimeMillis(), null);
+											}
+										});
+									}
+									// No more update
+									return;
+								}
+								
+								// Adjust delayMillis by the speed if home is getting closer
+								if (loc.hasSpeed() == true) {
+									float[] oldDist = new float[1];
+									oldDist[0] = -1;	// If oldDist is not available, do not adjust
+									
+									Iterator<SensorGPS.LocationEvent> it = l.iterator();
+									if (it.hasNext() == true) it.next();
+									while (it.hasNext()) {
+										SensorGPS.LocationEvent cur = it.next();
+										if (cur.getLocation() != null) {
+											Location.distanceBetween(
+													cur.getLocation().getLatitude(), cur.getLocation().getLongitude(),
+													((double)home.getLatitudeE6()) / 1E6, ((double)home.getLongitudeE6()) / 1E6, oldDist);
+										}
+									}
+									
+									float speed = loc.getSpeed();
+									if (dist[0] < oldDist[0] && dist[0]/speed < UPDATE_INTERVAL_MAX/1000) {
+										Log.i(GoHomeSituation.this.getName(), "adjust update time by speed: " + speed + "m/s");
+										delayMillis = ((long) ( (dist[0]/2)/speed )) * 1000;
+										if (delayMillis < UPDATE_INTERVAL_MIN/1000) {
+											delayMillis = UPDATE_INTERVAL_MIN;
+										}
+									}
 								}
 							}
-						}
-					}
-				}
-				
-				Log.i(GoHomeSituation.this.getName(), "next update in: " + delayMillis + "ms");
+						} // end of if home != null
 						
-				if (mAlarmManager != null)
-					mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + delayMillis, pendingTask);
-			}
+						Log.i(GoHomeSituation.this.getName(), "next update in: " + delayMillis + "ms");
+						
+						if (mAlarmManager != null)
+							mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + delayMillis, pendingTask);
+					} // end of synchronized
+				} // end of run
+			});
+
+			taskThread.start();
 		}
 	}
 
@@ -582,9 +601,9 @@ class KoalaSituation extends AbstractSituation implements OnTouchListener {
 	private static final String UPDATE_TOUCH = "kaistcs.android.dontkoala.Koala_UPDATE_TOUCH";
 	
 	/** Use the latest location if it is not too old */
-	private static final int INTERLEAVE_DELAY = 60 * 1000;
-	private static final int UPDATE_INTERVAL = 10 * 60 * 1000;
-	private static final int KOALA_INTERVAL = 40 * 60 * 1000;
+	private static final int INTERLEAVE_DELAY = 5*1000;//60 * 1000;
+	private static final int UPDATE_INTERVAL = 15 * 1000;//10 * 60 * 1000;
+	private static final int KOALA_INTERVAL = 60*1000;//40 * 60 * 1000;
 	private static final int MOVE_THRESHOLD = 80;
 
 	public KoalaSituation(Context context) {
@@ -618,81 +637,95 @@ class KoalaSituation extends AbstractSituation implements OnTouchListener {
 		public void onReceive(Context context, Intent intent) {
 			Log.i(getName(), "UpdateTask.onReceive()");
 			
-			boolean bKoala = true;
-			
-			synchronized (mSensorTouch) {
-				LinkedList<AbstractSensor.TimedEvent> l = mSensorTouch.getData();
-				AbstractSensor.TimedEvent e = null;
-				
-				if (l.isEmpty() == false)
-					e = l.getFirst();
-				
-				// Check for the last touch / detection beginning time
-				if (e != null && SystemClock.elapsedRealtime() - e.realTime <= KOALA_INTERVAL) {
-					Log.i(getName(), "No Koala, Reason: Touch");
-					bKoala = false;
-				}
-			}
-			
-			synchronized (mSensorGPS) {
-				LinkedList<SensorGPS.LocationEvent> l = mSensorGPS.getData();
-				SensorGPS.LocationEvent e = null;
-				
-				if (l.isEmpty() == false)
-					e = l.getFirst();
-				
-				if (e == null || SystemClock.elapsedRealtime() - e.realTime >= INTERLEAVE_DELAY) {
-					if (mSensorGPS.update() == true)
-						e = mSensorGPS.getData().getFirst();
-				}
-				
-				// Check GPS fix failure (not outside) / Check if there's a move
-				if (e.getLocation() == null) {
-					bKoala = false;
-					Log.i(getName(), "No Koala, Reason: No GPS Signal, Inside");
-				} else {
-					Iterator<SensorGPS.LocationEvent> it = l.iterator();
+			Thread taskThread = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					boolean bKoala = true;
 					
-					while (it.hasNext()) {
-						SensorGPS.LocationEvent event = it.next();
+					synchronized (mSensorTouch) {
+						LinkedList<AbstractSensor.TimedEvent> l = mSensorTouch.getData();
+						AbstractSensor.TimedEvent e = null;
 						
-						if (SystemClock.elapsedRealtime() - event.realTime <= KOALA_INTERVAL) {
-							if (event.getLocation() == null) {
-								bKoala = false;
-								break;
-							} else {
-								float[] dist = new float[1];
-								Location.distanceBetween(
-										e.getLocation().getLatitude(), e.getLocation().getLongitude(),
-										event.getLocation().getLatitude(), event.getLocation().getLongitude(), dist);
-								if (dist[0] > MOVE_THRESHOLD) {
-									Log.i(getName(), "No Koala, Reason: Move for " + dist[0] + "m");
-									bKoala = false;
-								}
-							}
-						// clean location events
-						} else {
-							it.remove();
+						if (l.isEmpty() == false)
+							e = l.getFirst();
+						
+						// Check for the last touch / detection beginning time
+						if (e != null && SystemClock.elapsedRealtime() - e.realTime <= KOALA_INTERVAL) {
+							Log.i(getName(), "No Koala, Reason: Touch");
+							bKoala = false;
 						}
 					}
-				}
-				
-				if (bKoala == true) {
-					Log.i(getName(), "Koala Detected");
-					if (listener != null) {
-						int[] latLongE6 = new int [2];
-						latLongE6[0] = (int) (e.getLocation().getLatitude() * 1E6);
-						latLongE6[1] = (int) (e.getLocation().getLongitude() * 1E6);
-						listener.onDetectSituation(KoalaSituation.this, System.currentTimeMillis(), latLongE6);
+					
+					synchronized (mSensorGPS) {
+						LinkedList<SensorGPS.LocationEvent> l = mSensorGPS.getData();
+						SensorGPS.LocationEvent e = null;
+						
+						if (l.isEmpty() == false)
+							e = l.getFirst();
+						
+						if (e == null || SystemClock.elapsedRealtime() - e.realTime >= INTERLEAVE_DELAY) {
+							if (mSensorGPS.update() == true)
+								e = mSensorGPS.getData().getFirst();
+						}
+						
+						// Check GPS fix failure (not outside) / Check if there's a move
+						if (e.getLocation() == null) {
+							bKoala = false;
+							Log.i(getName(), "No Koala, Reason: No GPS Signal, Inside");
+						} else {
+							Iterator<SensorGPS.LocationEvent> it = l.iterator();
+							
+							while (it.hasNext()) {
+								SensorGPS.LocationEvent event = it.next();
+								
+								if (SystemClock.elapsedRealtime() - event.realTime <= KOALA_INTERVAL) {
+									if (event.getLocation() == null) {
+										bKoala = false;
+										break;
+									} else {
+										float[] dist = new float[1];
+										Location.distanceBetween(
+												e.getLocation().getLatitude(), e.getLocation().getLongitude(),
+												event.getLocation().getLatitude(), event.getLocation().getLongitude(), dist);
+										if (dist[0] > MOVE_THRESHOLD) {
+											Log.i(getName(), "No Koala, Reason: Move for " + dist[0] + "m");
+											bKoala = false;
+										}
+									}
+								// clean location events
+								} else {
+									it.remove();
+								}
+							}
+						}
+						
+						if (bKoala == true) {
+							Log.i(getName(), "Koala Detected");
+							if (listener != null) {
+								final int[] latLongE6 = new int [2];
+								latLongE6[0] = (int) (e.getLocation().getLatitude() * 1E6);
+								latLongE6[1] = (int) (e.getLocation().getLongitude() * 1E6);
+								
+								Handler handler = new Handler(mContext.getMainLooper());
+								handler.post(new Runnable() {
+									@Override
+									public void run() {
+										listener.onDetectSituation(KoalaSituation.this, System.currentTimeMillis(), latLongE6);
+									}
+								});
+							}
+						}
+						
+						long delayMillis = UPDATE_INTERVAL;
+						
+						Log.i(getName(), "next update in: " + delayMillis + "ms");
+						if (mAlarmManager != null)
+							mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + delayMillis, pendingTask);
 					}
-				}
-				
-				long delayMillis = UPDATE_INTERVAL;
-				
-				Log.i(getName(), "next update in: " + delayMillis);
-				if (mAlarmManager != null)
-					mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + delayMillis, pendingTask);
-			}
+				} // end of run()
+			});
+
+			taskThread.start();
 		}
 	}
 	
@@ -1002,18 +1035,73 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 	@Override
 	public void onDetectSituation(AbstractSituation s, long wallTime, int[] latLongE6) {
 		Log.i("DetectionService", "onDetectSituation(s: " + s.getName() + ", latE6: " + latLongE6[0] + ", longE6: " + latLongE6[1] + ")");
+		
+		UserInfo userInfo = new UserInfo(this);
+		EmergencyContactsDB db = new EmergencyContactsDB(this);
+		db.open();
+		Cursor c = db.queryAll();
+		c.moveToFirst();
+		
+		ArrayList<String> phoneNumbers = new ArrayList<String>();
+		
+		while (c.isAfterLast() == false) {
+			phoneNumbers.add( c.getString(c.getColumnIndex(EmergencyContactsDB.Columns.NUMBER)) );
+			c.moveToNext();
+		}
+		
+		c.close();
+		db.close();
+		
+		// TODO: add phone numbers of the members to phoneNumbers
+		// ...
+		
+		SmsManager sms = SmsManager.getDefault();
+		String text = "KOALA|";
+		String name = userInfo.getName();
+		
+		if (name.isEmpty() == true)
+			text += "NONE|";
+		else
+			text += name + "|";
+		
+		text += userInfo.getPhoneNumber() + "|";
+		
+		// KOALA|자기이름|자기번호|상태|위치
+		// 상태: H, K
+		// 위치: LatitudeE6|LongitudeE6
+		// EMPTY STRING = "NONE"
+		if (s.getName() == goHome.getName()) {
+			text += "H|" + "NONE|NONE";
+		} else if (s.getName() == koala.getName()) {
+			text += "K|" + latLongE6[0] + "|" + latLongE6[1];
+		} else if (s.getName() == lowBattery.getName()) {
+			// TODO: Not implemented yet. latLongE6 is not available here
+		}
+		
+		for (String phoneNum : phoneNumbers) {
+			sms.sendTextMessage(phoneNum, null, text, null, null);
+		}
 	}
 
 	@Override
-	public void onLostPhone(long wallTime, String sender) {
-		// FIXME: Just send GPS location
-		SensorGPS sensorGPS = (SensorGPS) sensors.get(SensorGPS.NAME);
-		if (sensorGPS.update() == true) {
-			Log.i("DetectionService", "onLostPhone(sender: " + sender + ")");
-			
-			Location l = sensorGPS.getData().getFirst().getLocation();
-			SmsManager sms = SmsManager.getDefault();
-			sms.sendTextMessage(sender, null, "Latitude: " + l.getLatitude() + ", Longitude: " + l.getLongitude(), null, null);
-		}
+	public void onLostPhone(long wallTime, final String sender) {
+		// TODO: What if GPS is not available?
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				SensorGPS sensorGPS = (SensorGPS) sensors.get(SensorGPS.NAME);
+				if (sensorGPS.update() == true) {
+					Log.i("DetectionService", "onLostPhone(sender: " + sender + ")");
+					
+					Location l = sensorGPS.getData().getFirst().getLocation();
+					SmsManager sms = SmsManager.getDefault();
+					
+					int latE6 = (int) (l.getLatitude() * 1E6);
+					int longE6 = (int) (l.getLongitude() * 1E6);
+					
+					sms.sendTextMessage(sender, null, "http://maps.google.com/maps?q=" + ((float)latE6)/1E6 + "," + ((float)longE6)/1E6, null, null);
+				}
+			}
+		}).start();
 	}
 }
