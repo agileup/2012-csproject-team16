@@ -100,6 +100,7 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 	
 	public static final String NAME = "GPS";
 	LinkedList<LocationEvent> data;
+	LinkedList<LocationEvent> temp;
 	LocationManager locM;
 	
 	/** Timeout for GPS fix */
@@ -113,6 +114,7 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 	SensorGPS(LocationManager l) {
 		locM = l;
 		data = new LinkedList<LocationEvent>();
+		temp = new LinkedList<LocationEvent>();
 	}
 	
 	@Override
@@ -132,6 +134,7 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 		Log.i(getName(), "update()");
 		
 		updateResult = false;
+		temp.clear();
 		locM.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this, updateThread.getLooper());
 		
 		try {
@@ -143,6 +146,32 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 		if (updateResult == false) {
 			Log.i(getName(), "No GPS Signal");
 			data.addFirst(new LocationEvent(null));
+		} else {
+			// add location with minimum accuracy
+			float minAcc = 100000;
+			LocationEvent minEvent = null;
+			
+			for (LocationEvent tempEvent : temp) {
+				if (tempEvent.getLocation().hasAccuracy() == true) {
+					float curAcc = tempEvent.getLocation().getAccuracy();
+					if (curAcc < minAcc) {
+						minEvent = tempEvent;
+						minAcc = curAcc;
+					}
+				}
+			}
+			
+			// if accuracy is not available
+			if (minEvent == null)
+				minEvent = temp.getFirst();
+			
+			Location location = minEvent.getLocation();
+			Log.i(getName(), 
+					"lat: " + location.getLatitude() + ", " + "long: " + location.getLongitude() + ", " +
+					"acc: " + location.hasAccuracy() + ", " + "acc_value: " + location.getAccuracy() +
+					"spd: " + location.hasSpeed() + ", " + "spd_value: " + location.getSpeed());
+			
+			data.add(minEvent);
 		}
 		
 		if (updateThread.isAlive())
@@ -154,13 +183,9 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 	@Override
 	public void onLocationChanged(Location location) {
 		LocationEvent e = new LocationEvent(location);
-		data.addFirst(e);
+		temp.addFirst(e);
 		
 		updateResult = true;
-		Log.i(getName(), 
-				"lat: " + location.getLatitude() + ", " + "long: " + location.getLongitude() + ", " +
-				"acc: " + location.hasAccuracy() + ", " + "acc_value: " + location.getAccuracy() +
-				"spd: " + location.hasSpeed() + ", " + "spd_value: " + location.getSpeed());
 		
 		// Try to achieve the given accuracy
 		if (location.hasAccuracy() == false || location.getAccuracy() <= ACCURACY_THRESHOLD) {
@@ -407,7 +432,7 @@ class GoHomeSituation extends AbstractSituation {
 	private static final int INTERLEAVE_DELAY = 60 * 1000;
 	private static final int UPDATE_INTERVAL_MAX = 10 * 60 * 1000;
 	private static final int UPDATE_INTERVAL_MIN = 0 * 1000;
-	private static final int HOMELOC_DIST_THRESHOLD = 10;
+	private static final int HOMELOC_DIST_THRESHOLD = 30;
 	
 	public GoHomeSituation(Context context) {
 		mContext = context;
@@ -435,62 +460,65 @@ class GoHomeSituation extends AbstractSituation {
 			Log.i(getName(), "onReceive()");
 			
 			synchronized (mSensorGPS) {
-				LinkedList<SensorGPS.LocationEvent> l = mSensorGPS.getData();
-				SensorGPS.LocationEvent e = null; 
-				
-				// Get the last known location
-				if (l.isEmpty() == false)
-					e = l.getFirst();
-				
-				// Update if it is not available or too old
-				if (e == null || SystemClock.elapsedRealtime() - e.realTime >= INTERLEAVE_DELAY) {
-					if (mSensorGPS.update() == true)
-						e = mSensorGPS.getData().getFirst();
-				}
-				
+				UserInfo.HomeLocationInfo home = mUserInfo.getHomeLocation();
 				long delayMillis = UPDATE_INTERVAL_MAX;
 				
-				// If a GPS fix occurs...
-				if (e != null) {
-					Location loc = e.getLocation();
-					float[] dist = new float[1];
-					UserInfo.HomeLocationInfo home = mUserInfo.getHomeLocation();
-					Location.distanceBetween(
-							loc.getLatitude(), loc.getLongitude(),
-							((double)home.getLatitudeE6()) / 1E6, ((double)home.getLongitudeE6()) / 1E6, dist);
+				if (home != null) {
+					LinkedList<SensorGPS.LocationEvent> l = mSensorGPS.getData();
+					SensorGPS.LocationEvent e = null; 
 					
-					Log.i(GoHomeSituation.this.getName(), "dist to home: " + dist[0]);
+					// Get the last known location
+					if (l.isEmpty() == false)
+						e = l.getFirst();
 					
-					// Arrived home
-					if (dist[0] <= HOMELOC_DIST_THRESHOLD) {
-						if (listener != null)
-							listener.onDetectSituation(GoHomeSituation.this, System.currentTimeMillis(), null);
-						// No more update
-						return;
+					// Update if it is not available or too old
+					if (e == null || SystemClock.elapsedRealtime() - e.realTime >= INTERLEAVE_DELAY) {
+						if (mSensorGPS.update() == true)
+							e = mSensorGPS.getData().getFirst();
 					}
 					
-					// Adjust delayMillis by the speed if home is getting closer
-					if (loc.hasSpeed() == true) {
-						float[] oldDist = new float[1];
-						oldDist[0] = -1;	// If oldDist is not available, do not adjust
+					// If a GPS fix occurs...
+					if (e != null) {
+						Location loc = e.getLocation();
+						float[] dist = new float[1];
+						Location.distanceBetween(
+								loc.getLatitude(), loc.getLongitude(),
+								((double)home.getLatitudeE6()) / 1E6, ((double)home.getLongitudeE6()) / 1E6, dist);
 						
-						Iterator<SensorGPS.LocationEvent> it = l.iterator();
-						if (it.hasNext() == true) it.next();
-						while (it.hasNext()) {
-							SensorGPS.LocationEvent cur = it.next();
-							if (cur.getLocation() != null) {
-								Location.distanceBetween(
-										cur.getLocation().getLatitude(), cur.getLocation().getLongitude(),
-										((double)home.getLatitudeE6()) / 1E6, ((double)home.getLongitudeE6()) / 1E6, oldDist);
-							}
+						Log.i(GoHomeSituation.this.getName(), "dist to home: " + dist[0]);
+						
+						// Arrived home
+						if (dist[0] <= HOMELOC_DIST_THRESHOLD) {
+							Log.i(GoHomeSituation.this.getName(), "arrived home!" + dist[0]);
+							if (listener != null)
+								listener.onDetectSituation(GoHomeSituation.this, System.currentTimeMillis(), null);
+							// No more update
+							return;
 						}
 						
-						float speed = loc.getSpeed();
-						if (dist[0] < oldDist[0] && dist[0]/speed < UPDATE_INTERVAL_MAX/1000) {
-							Log.i(GoHomeSituation.this.getName(), "adjust update time by speed: " + speed + "m/s");
-							delayMillis = ((long) ( (dist[0]/2)/speed )) * 1000;
-							if (delayMillis < UPDATE_INTERVAL_MIN/1000) {
-								delayMillis = UPDATE_INTERVAL_MIN;
+						// Adjust delayMillis by the speed if home is getting closer
+						if (loc.hasSpeed() == true) {
+							float[] oldDist = new float[1];
+							oldDist[0] = -1;	// If oldDist is not available, do not adjust
+							
+							Iterator<SensorGPS.LocationEvent> it = l.iterator();
+							if (it.hasNext() == true) it.next();
+							while (it.hasNext()) {
+								SensorGPS.LocationEvent cur = it.next();
+								if (cur.getLocation() != null) {
+									Location.distanceBetween(
+											cur.getLocation().getLatitude(), cur.getLocation().getLongitude(),
+											((double)home.getLatitudeE6()) / 1E6, ((double)home.getLongitudeE6()) / 1E6, oldDist);
+								}
+							}
+							
+							float speed = loc.getSpeed();
+							if (dist[0] < oldDist[0] && dist[0]/speed < UPDATE_INTERVAL_MAX/1000) {
+								Log.i(GoHomeSituation.this.getName(), "adjust update time by speed: " + speed + "m/s");
+								delayMillis = ((long) ( (dist[0]/2)/speed )) * 1000;
+								if (delayMillis < UPDATE_INTERVAL_MIN/1000) {
+									delayMillis = UPDATE_INTERVAL_MIN;
+								}
 							}
 						}
 					}
@@ -508,14 +536,16 @@ class GoHomeSituation extends AbstractSituation {
 	public void start() {
 		Log.i(getName(), "start()");
 		
-		updateTask = new UpdateTask();
-		mContext.registerReceiver(updateTask, new IntentFilter(UPDATE_ACTION));
-		
-		Intent intent = new Intent(UPDATE_ACTION);
-		pendingTask = PendingIntent.getBroadcast(mContext, REQUEST_CODE, intent, 0);
-		
-		mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
-		mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), pendingTask);
+		if (updateTask == null) {
+			updateTask = new UpdateTask();
+			mContext.registerReceiver(updateTask, new IntentFilter(UPDATE_ACTION));
+			
+			Intent intent = new Intent(UPDATE_ACTION);
+			pendingTask = PendingIntent.getBroadcast(mContext, REQUEST_CODE, intent, 0);
+			
+			mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+			mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), pendingTask);
+		}
 	}
 
 	@Override
@@ -554,8 +584,8 @@ class KoalaSituation extends AbstractSituation implements OnTouchListener {
 	/** Use the latest location if it is not too old */
 	private static final int INTERLEAVE_DELAY = 60 * 1000;
 	private static final int UPDATE_INTERVAL = 10 * 60 * 1000;
-	private static final int KOALA_INTERVAL = 40 * 60 * 1000;
-	private static final int MOVE_THRESHOLD = 10;
+	private static final int KOALA_INTERVAL = 1 * 60 * 1000;
+	private static final int MOVE_THRESHOLD = 80;
 
 	public KoalaSituation(Context context) {
 		mContext = context;
@@ -636,7 +666,7 @@ class KoalaSituation extends AbstractSituation implements OnTouchListener {
 										e.getLocation().getLatitude(), e.getLocation().getLongitude(),
 										event.getLocation().getLatitude(), event.getLocation().getLongitude(), dist);
 								if (dist[0] > MOVE_THRESHOLD) {
-									Log.i(getName(), "No Koala, Reason: Move");
+									Log.i(getName(), "No Koala, Reason: Move for " + dist[0] + "m");
 									bKoala = false;
 								}
 							}
@@ -672,21 +702,25 @@ class KoalaSituation extends AbstractSituation implements OnTouchListener {
 
 	@Override
 	public void start() {
-		updateTask = new UpdateTask();
-		updateTouch = new UpdateTouch();
-		mContext.registerReceiver(updateTask, new IntentFilter(UPDATE_ACTION));
-		mContext.registerReceiver(updateTouch, new IntentFilter(UPDATE_TOUCH));
+		Log.i(getName(), "start()");
 		
-		Intent intent = new Intent(UPDATE_ACTION);
-		pendingTask = PendingIntent.getBroadcast(mContext, REQUEST_CODE_TASK, intent, 0);
-		
-		Intent intent2 = new Intent(UPDATE_TOUCH);
-		pendingTouch = PendingIntent.getBroadcast(mContext, REQUEST_CODE_TOUCH, intent2, 0);
-		
-		mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
-		mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), pendingTask);
-		
-		mSensorTouch.beginListenTouch(this);
+		if (updateTask == null) {
+			updateTask = new UpdateTask();
+			updateTouch = new UpdateTouch();
+			mContext.registerReceiver(updateTask, new IntentFilter(UPDATE_ACTION));
+			mContext.registerReceiver(updateTouch, new IntentFilter(UPDATE_TOUCH));
+			
+			Intent intent = new Intent(UPDATE_ACTION);
+			pendingTask = PendingIntent.getBroadcast(mContext, REQUEST_CODE_TASK, intent, 0);
+			
+			Intent intent2 = new Intent(UPDATE_TOUCH);
+			pendingTouch = PendingIntent.getBroadcast(mContext, REQUEST_CODE_TOUCH, intent2, 0);
+			
+			mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+			mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), pendingTask);
+			
+			mSensorTouch.beginListenTouch(this);
+		}
 	}
 	
 	@Override
@@ -701,6 +735,8 @@ class KoalaSituation extends AbstractSituation implements OnTouchListener {
 	public void stop() {
 		Log.i(getName(), "stop()");
 		if (updateTask != null) {
+			mSensorTouch.endListenTouch();
+			
 			mContext.unregisterReceiver(updateTask);
 			mContext.unregisterReceiver(updateTouch);
 			updateTask = null;
@@ -771,14 +807,17 @@ class LowBatterySituation extends AbstractSituation {
 	@Override
 	public void start() {
 		Log.i(getName(), "start()");
-		updateTask = new UpdateTask();
-		mContext.registerReceiver(updateTask, new IntentFilter(UPDATE_ACTION));
 		
-		Intent intent = new Intent(UPDATE_ACTION);
-		pendingTask = PendingIntent.getBroadcast(mContext, REQUEST_CODE, intent, 0);
-		
-		mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
-		mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), pendingTask);
+		if (updateTask == null) {
+			updateTask = new UpdateTask();
+			mContext.registerReceiver(updateTask, new IntentFilter(UPDATE_ACTION));
+			
+			Intent intent = new Intent(UPDATE_ACTION);
+			pendingTask = PendingIntent.getBroadcast(mContext, REQUEST_CODE, intent, 0);
+			
+			mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+			mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), pendingTask);
+		}
 	}
 
 	@Override
@@ -905,27 +944,32 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		String action = intent.getAction();
+		String action = null;
+		if (intent != null)
+			action = intent.getAction();
 		
-		if (action.equals(ACTION_START_DETECTION)) {
-			goHome.setOnDetectSituation(this);
-			koala.setOnDetectSituation(this);
-			lowBattery.setOnDetectSituation(this);
-			
-			goHome.start();
-			koala.start();
-			lowBattery.start();
-		} else if (action.equals(ACTION_STOP_DETECTION)) {
-			goHome.stop();
-			koala.stop();
-			lowBattery.stop();
-		} else if (action.equals(ACTION_START_LOST_PHONE)) {
-			lostPhone.setOnLostPhoneListener(this);
-			
-			lostPhone.start();
-		} else if (action.equals(ACTION_STOP_LOST_PHONE)) {
-			lostPhone.stop();
+		if (action != null) {
+			if (action.equals(ACTION_START_DETECTION)) {
+				goHome.setOnDetectSituation(this);
+				koala.setOnDetectSituation(this);
+				lowBattery.setOnDetectSituation(this);
+				
+				goHome.start();
+				koala.start();
+				lowBattery.start();
+			} else if (action.equals(ACTION_STOP_DETECTION)) {
+				goHome.stop();
+				koala.stop();
+				lowBattery.stop();
+			} else if (action.equals(ACTION_START_LOST_PHONE)) {
+				lostPhone.setOnLostPhoneListener(this);
+				
+				lostPhone.start();
+			} else if (action.equals(ACTION_STOP_LOST_PHONE)) {
+				lostPhone.stop();
+			}
 		}
+		
 		
 		return START_STICKY;
 	}
