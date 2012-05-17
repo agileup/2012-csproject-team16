@@ -91,7 +91,7 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 			this.loc = loc;
 		}
 		
-		/** If it is null, it means GPS fix timeout was occurred at that time. */
+		/** If it is null, it means GPS fix didn't occur at that time. */
 		public Location getLocation() {
 			return loc;
 		}
@@ -183,6 +183,7 @@ class SensorGPS extends AbstractSensor implements LocationListener {
 	@Override
 	public void onStatusChanged(String provider, int status, Bundle extras) {
 		if (status == LocationProvider.OUT_OF_SERVICE) {
+			data.addFirst(new LocationEvent(null));
 			locM.removeUpdates(this);
 			updateThread.quit();
 		}
@@ -365,7 +366,10 @@ class SensorSMS extends AbstractSensor {
 	public void beginListenSMS(OnReceiveSMSListener l) {
 		Log.i(getName(), "beginListenSMS()");
 		listener = l;
-        mContext.registerReceiver(smsReceiver, new IntentFilter(ACTION));        
+		
+		IntentFilter filter = new IntentFilter(ACTION);
+		filter.setPriority(999);
+        mContext.registerReceiver(smsReceiver, filter);        
 	}
 	
 	public void endListenSMS() {
