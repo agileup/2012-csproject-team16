@@ -865,7 +865,7 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 	}
 
 	@Override
-	public void onStart(Intent intent, int startId) {
+	public void onCreate() {
 		sensors = new HashMap<String, AbstractSensor>();
 		
 		goHome = new GoHomeSituation(this);
@@ -881,6 +881,7 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 		lostPhone.init(sensors);
 	}
 	
+	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		String action = intent.getAction();
 		
