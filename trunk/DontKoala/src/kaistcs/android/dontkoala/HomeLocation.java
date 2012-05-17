@@ -125,15 +125,17 @@ public class HomeLocation extends MapActivity  {
 		mapOverlays.add(new LongTouchDetector());
 		
 		// Animate to...
-		GeoPoint curLoc;
+		GeoPoint curLoc = null;
 		UserInfo.HomeLocationInfo homeLocIn = getIntent().getParcelableExtra("HomeLocationIn");
 		
 		if (homeLocIn == null) {
 			// ...the last known location
 			LocationManager locM = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 			String bestProvider = locM.getBestProvider(new Criteria(), true);
-			Location l = locM.getLastKnownLocation(bestProvider);
-			curLoc = new GeoPoint( (int)(l.getLatitude() * 1E6), (int)(l.getLongitude() * 1E6) );
+			if (bestProvider != null) {
+				Location l = locM.getLastKnownLocation(bestProvider);
+				curLoc = new GeoPoint( (int)(l.getLatitude() * 1E6), (int)(l.getLongitude() * 1E6) );
+			}
 		} else {
 			// ...the home location
 			curLoc = new GeoPoint(homeLocIn.getLatitudeE6(), homeLocIn.getLongitudeE6());
@@ -145,7 +147,7 @@ public class HomeLocation extends MapActivity  {
 			MapController ctrl = mMapView.getController();
 			
 			ctrl.animateTo(curLoc);
-			ctrl.setZoom(15);
+			ctrl.setZoom(18);
 		}
 		
 		mMapView.postInvalidate();

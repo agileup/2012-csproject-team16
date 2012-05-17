@@ -50,6 +50,7 @@
         <activity android:name="EmergencyContacts" android:label="Edit Emergency Contacts"></activity>
         <activity android:name="HomeLocation" android:label="Long-touch your home location"></activity>
         <activity android:name="NotificationActivity"></activity>
+        <activity android:name="NotificationDetail"></activity>
         <service android:name="DetectionService"></service>
         
         <receiver

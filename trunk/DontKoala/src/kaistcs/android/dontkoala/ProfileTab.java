@@ -74,10 +74,6 @@ public class ProfileTab extends PreferenceActivity {
 		if (requestCode == REQ_HOME_LOCATION && resultCode == RESULT_OK) {
 			UserInfo.HomeLocationInfo homeLocOut = data.getParcelableExtra("HomeLocationOut");
 			userInfo.setHomeLocation(homeLocOut);
-			
-			// TODO: test code
-	        // Intent svc = new Intent(this, DetectionService.class);
-	        // startService(svc);
 		}
 	}
 }
