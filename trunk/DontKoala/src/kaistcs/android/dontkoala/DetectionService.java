@@ -1067,7 +1067,7 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 		
 		// TODO: add phone numbers of the members to phoneNumber
 		
-		SmsManager sms = SmsManager.getDefault();
+		final SmsManager sms = SmsManager.getDefault();
 		String text = "KOALA|";
 		String ecnText = "알림: ";
 		String name = userInfo.getName();
@@ -1097,41 +1097,53 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 		
 		for (String phoneNum : ecnNumbers) {
 			ecnText += "\n" + "http://maps.google.com/maps?q=" + ((float)latLongE6[0])/1E6 + "," + ((float)latLongE6[1])/1E6;
-			
+			Log.i("DetectionService", "Sending SMS: " + phoneNum + ": " + ecnText);
 			sms.sendTextMessage(phoneNum, null, ecnText, null, null);
 		}
 		
-		ArrayList<NameValuePair> nameValue = new ArrayList<NameValuePair>();
-		String response_result = null;
-		try {	
-			nameValue.add(new BasicNameValuePair("me", userInfo.getName()));
-			
-			HttpClient client = new DefaultHttpClient();
-			HttpPost request = new HttpPost("http://flclab.iptime.org/dontkoala/get_number.php");
-			request.setEntity(new UrlEncodedFormEntity(nameValue, HTTP.UTF_8));
-			HttpResponse response = client.execute(request);
-			HttpEntity entity = response.getEntity();
-			InputStream is = entity.getContent();
-			
-			BufferedReader br = new BufferedReader(new InputStreamReader(is, HTTP.UTF_8));
-			
-			String line = null;
-			while ((line=br.readLine()) != null) {
-				response_result = line;
-				Log.d("DEBUG", line);
-			}
-			
-			is.close();
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		String[] phoneNumbers = response_result.split("\\|");
+		final String userName = userInfo.getName();
+		final String textMessage = text.toString();
 		
-		for (String phoneNum : phoneNumbers){
-			sms.sendTextMessage(phoneNum, null, text, null, null);
-		}
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				ArrayList<NameValuePair> nameValue = new ArrayList<NameValuePair>();
+				String response_result = null;
+				try {	
+					nameValue.add(new BasicNameValuePair("me", userName));
+					
+					HttpClient client = new DefaultHttpClient();
+					HttpPost request = new HttpPost("http://flclab.iptime.org/dontkoala/get_number.php");
+					request.setEntity(new UrlEncodedFormEntity(nameValue, HTTP.UTF_8));
+					HttpResponse response = client.execute(request);
+					HttpEntity entity = response.getEntity();
+					InputStream is = entity.getContent();
+					
+					BufferedReader br = new BufferedReader(new InputStreamReader(is, HTTP.UTF_8));
+					
+					String line = null;
+					while ((line=br.readLine()) != null) {
+						response_result = line;
+						Log.d("DEBUG", line);
+					}
+					
+					is.close();
+
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
+				String[] phoneNumbers = response_result.split("\\|");
+				
+				for (String phoneNum : phoneNumbers){
+					Log.i("DetectionService", "Sending SMS: " + phoneNum + ": " + textMessage);
+					sms.sendTextMessage(phoneNum, null, textMessage, null, null);
+				}
+			}
+		}).start();
+		
+		//sms.sendTextMessage("01073505507", null, text, null, null);
+		//sms.sendTextMessage("01043888128", null, text, null, null);
 	}
 
 	@Override
