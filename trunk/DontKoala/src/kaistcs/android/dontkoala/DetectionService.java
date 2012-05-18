@@ -1,10 +1,23 @@
 package kaistcs.android.dontkoala;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HTTP;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -1042,27 +1055,29 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 		Cursor c = db.queryAll();
 		c.moveToFirst();
 		
-		ArrayList<String> phoneNumbers = new ArrayList<String>();
+		ArrayList<String> ecnNumbers = new ArrayList<String>();
 		
 		while (c.isAfterLast() == false) {
-			phoneNumbers.add( c.getString(c.getColumnIndex(EmergencyContactsDB.Columns.NUMBER)) );
+			ecnNumbers.add( c.getString(c.getColumnIndex(EmergencyContactsDB.Columns.NUMBER)) );
 			c.moveToNext();
 		}
 		
 		c.close();
 		db.close();
 		
-		// TODO: add phone numbers of the members to phoneNumbers
-		// ...
+		// TODO: add phone numbers of the members to phoneNumber
 		
 		SmsManager sms = SmsManager.getDefault();
 		String text = "KOALA|";
+		String ecnText = "알림: ";
 		String name = userInfo.getName();
 		
-		if (name.isEmpty() == true)
+		if (name.isEmpty() == true) {
 			text += "NONE|";
-		else
+		} else {
 			text += name + "|";
+			ecnText += name + " 님이 ";
+		}
 		
 		text += userInfo.getPhoneNumber() + "|";
 		
@@ -1071,14 +1086,50 @@ public class DetectionService extends Service implements AbstractSituation.OnDet
 		// 위치: LatitudeE6|LongitudeE6
 		// EMPTY STRING = "NONE"
 		if (s.getName() == goHome.getName()) {
-			text += "H|" + "NONE|NONE";
+			text += "1|" + "NONE|NONE";
+			ecnText += " 집에 도착했습니다.";
 		} else if (s.getName() == koala.getName()) {
-			text += "K|" + latLongE6[0] + "|" + latLongE6[1];
+			text += "0|" + latLongE6[0] + "|" + latLongE6[1];
+			ecnText += " 꽐라입니다.";
 		} else if (s.getName() == lowBattery.getName()) {
 			// TODO: Not implemented yet. latLongE6 is not available here
 		}
 		
-		for (String phoneNum : phoneNumbers) {
+		for (String phoneNum : ecnNumbers) {
+			ecnText += "\n" + "http://maps.google.com/maps?q=" + ((float)latLongE6[0])/1E6 + "," + ((float)latLongE6[1])/1E6;
+			
+			sms.sendTextMessage(phoneNum, null, ecnText, null, null);
+		}
+		
+		ArrayList<NameValuePair> nameValue = new ArrayList<NameValuePair>();
+		String response_result = null;
+		try {	
+			nameValue.add(new BasicNameValuePair("me", userInfo.getName()));
+			
+			HttpClient client = new DefaultHttpClient();
+			HttpPost request = new HttpPost("http://flclab.iptime.org/dontkoala/get_number.php");
+			request.setEntity(new UrlEncodedFormEntity(nameValue, HTTP.UTF_8));
+			HttpResponse response = client.execute(request);
+			HttpEntity entity = response.getEntity();
+			InputStream is = entity.getContent();
+			
+			BufferedReader br = new BufferedReader(new InputStreamReader(is, HTTP.UTF_8));
+			
+			String line = null;
+			while ((line=br.readLine()) != null) {
+				response_result = line;
+				Log.d("DEBUG", line);
+			}
+			
+			is.close();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		String[] phoneNumbers = response_result.split("\\|");
+		
+		for (String phoneNum : phoneNumbers){
 			sms.sendTextMessage(phoneNum, null, text, null, null);
 		}
 	}
